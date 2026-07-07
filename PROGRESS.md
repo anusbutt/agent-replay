@@ -73,3 +73,20 @@ Environment notes (WSL2 host, repo on /mnt/c):
 - .gitignore and .dockerignore (root + dashboard) created per implement flow.
 
 blocked: none — awaiting maintainer validation before Phase 2 (T008–T015)
+
+## Session 2026-07-07 (later) — Phase 2: Foundational (T008–T015)
+
+- T-08 done: SQLModel Run+Step in app/models.py — enums byte-identical, JSONB columns, UNIQUE (run_id, seq), indexes on agent_id/session_id/run_id | blocked: none
+- T-09 done: app/db.py engine/session from DATABASE_URL + create_all wired into main.py lifespan | blocked: none
+- T-10 done: static Bearer-key auth dependency (compare_digest) applied to all routers via include_router; /health stays open | blocked: none
+- T-11 done: app/schemas.py — IngestBatch/IngestResult/RunOut/StepOut/RunDetail/ForkRequest/AnalysisVerdict/DetectionVerdict/SweepResult/Error per openapi contract | blocked: none
+- T-12 done: contract tests tests/contract/{test_ingest,test_runs}.py + tests/conftest.py — verified FAILING first (7 failed) before implementation | blocked: none
+- T-13 done: POST /ingest — run upsert (flagged never downgraded; detection/analysis keys never clobbered), insert-only steps, per-item rejection; ingest tests pass | blocked: none
+- T-14 done: GET /runs (agent_id/session_id/status/limit/offset) + GET /runs/{id} steps ordered by seq; runs tests pass | blocked: none
+- T-15 done: scripts/seed_demo_run.py — Nestaro Friday/Saturday fixture (5 steps, verbatim contract shapes, no Authorization key) seeded; accepted=5, visible via GET /runs | blocked: none
+
+Verification: 8/8 contract tests pass on host venv AND inside backend container
+(docker compose exec backend pytest). Demo run 11111111-1111-4111-8111-111111111111
+seeded against rebuilt backend container.
+
+blocked: none — awaiting maintainer validation before Phase 3 (US1, T016–T031)
