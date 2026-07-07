@@ -208,3 +208,154 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
+
+# AgentReplay
+
+## What this project is
+
+AgentReplay is a flight recorder and time-travel debugger for AI agents. A
+Python SDK records every step of an agent's execution (LLM calls, tool calls,
+state changes). When a run goes wrong, the developer can inspect the timeline,
+get an AI root-cause analysis, and — the core feature — FORK the run: replay
+it from any step with a modification (e.g. an edited system prompt), using
+live inference but sandboxed tool calls, to verify a fix against the exact
+conversation that failed. Built solo for the AMD Developer Hackathon ACT II
+(Jul 6–11, 2026). Demo agent: Nestaro, a production lead-qualification FSM
+agent for home service businesses.
+
+## Stack (do not substitute)
+
+- SDK: Python 3.11+, httpx (async, batched, fire-and-forget)
+- Backend: FastAPI + SQLModel, deployed on Railway
+- DB: NeonDB (Postgres). Fixed columns for structure, JSONB for payloads
+- Dashboard: Next.js + TypeScript on Vercel. No UI library beyond Tailwind
+- Analysis inference: Gemma 4 served by vLLM on AMD MI300X (AMD Developer
+  Cloud), OpenAI-compatible endpoint. Fallback: same Gemma 4 family via
+  Fireworks API. Switch = ANALYSIS_BASE_URL env var only
+- No LangChain, no LangGraph, no ORMs other than SQLModel, no message queues
+
+## Architecture in one paragraph
+
+Agent code wraps its LLM client with `replay.wrap(client)` and decorates
+tools with `@replay.tool`. Events buffer in memory and flush in batches to
+`POST /ingest` on the FastAPI backend, which persists them to Postgres. The
+Next.js dashboard reads runs and renders timelines. The replay engine (same
+FastAPI process) reconstructs recorded context to execute forks. The analysis
+module sends serialized runs to Gemma 4 and stores structured verdicts.
+
+## Data contract (the law — every component obeys this)
+
+### Table: runs
+- id: UUID pk
+- agent_id: str, indexed
+- session_id: str, indexed (e.g. FB Messenger sender id)
+- status: enum(running, completed, failed, flagged)
+- parent_run_id: UUID fk -> runs.id, nullable (set only on forks)
+- fork_step: int, nullable (seq in parent where this fork diverged)
+- run_metadata: JSONB (channel, business_id, freeform)
+- started_at, ended_at: timestamptz
+
+### Table: steps
+- id: UUID pk
+- run_id: UUID fk -> runs.id, indexed
+- seq: int (1-based, per run; UNIQUE constraint on (run_id, seq))
+- type: enum(llm_call, tool_call, state_change)
+- input: JSONB   (shape depends on type, see below)
+- output: JSONB  (shape depends on type, see below)
+- latency_ms: int, nullable
+- tokens_in, tokens_out: int, nullable (llm_call only)
+- created_at: timestamptz
+
+### Payload shapes (verbatim recording — never summarize, never trim)
+
+llm_call.input — the EXACT request sent to the model:
+```json
+{
+  "model": "deepseek/deepseek-chat",
+  "messages": [
+    {"role": "system", "content": "<full system prompt as sent>"},
+    {"role": "user", "content": "I need duct cleaning Friday"}
+  ],
+  "temperature": 0.7,
+  "max_tokens": 1024
+}
+```
+
+llm_call.output — the EXACT response received:
+```json
+{
+  "id": "gen-abc123",
+  "choices": [{"message": {"role": "assistant",
+    "content": "<full assistant reply>"}, "finish_reason": "stop"}],
+  "usage": {"prompt_tokens": 512, "completion_tokens": 87}
+}
+```
+
+tool_call.input:
+```json
+{"name": "book_appointment",
+ "args": {"day": "saturday", "time": "14:00", "customer_id": "cust_991"}}
+```
+
+tool_call.output:
+```json
+{"result": {"booking_id": "bk_204", "confirmed": true},
+ "error": null}
+```
+
+state_change.input / .output:
+```json
+{"from_state": "QUOTING", "to_state": "BOOKING", "trigger": "user_confirmed"}
+```
+
+## Pinned decisions (never re-decide these in a session)
+
+1. Fork = new row in `runs` with parent_run_id + fork_step set. Parent run
+   and its steps are NEVER modified.
+2. Replay is conversation-level, not program-level: reconstruct the recorded
+   llm_call.input at the fork step, apply the user's modification, call the
+   model live from there. We do not re-execute agent application code.
+3. Tool interception during forks: match cached result by (run_id, seq)
+   positionally; fallback match by sha256(name + canonical_json(args));
+   no match -> return typed mock {"result": {"mocked": true}, "error": null}.
+   A forked run NEVER executes a real tool. No exceptions.
+4. Forked LLM calls run at temperature 0 unless the fork request overrides.
+5. The SDK must never raise into host agent code. All transport errors are
+   swallowed and logged locally. Recording failure must be invisible.
+6. Detection verdicts and analysis verdicts are stored as JSONB on the run's
+   metadata under keys "detection" and "analysis".
+
+## Scope guard — NOT in V1 (do not build, do not scaffold, do not "prepare for")
+
+Auth beyond a static API key. Multi-tenant UI. Rate limiting. OpenTelemetry.
+Framework integrations (LangChain etc.). Streaming ingestion. One-click
+deploy of fixes to agents. If a task seems to need one of these, stop and
+say so instead of building it.
+
+## Conventions
+
+- SQLModel models in app/models.py; routers per domain in app/routers/
+- SDK is its own package dir: sdk/agentreplay/
+- Commits: small, per task, message format "T-NN: <what>"
+- Type hints everywhere; pydantic models for all API request/response bodies
+
+## Session rules (hard rules)
+
+1. Execute exactly ONE task from tasks.md per session — the one given in the
+   prompt. Do not start the next task.
+2. NEVER modify any file under tests/. If a test seems wrong, stop and
+   report; do not "fix" it.
+3. Done = the task's acceptance criteria pass (pytest / curl / stated check),
+   verified by actually running them.
+4. On completion: check the task's box in tasks.md, append one line to
+   PROGRESS.md ("T-NN done: <one-line summary> | blocked: <none or what>"),
+   then STOP and wait.
+5. If uncertain about replay/fork semantics or the data contract: stop and
+   ask. Do not guess. The pinned decisions above are the tiebreaker.
+
+## Active Technologies
+- Python 3.11+ (SDK + backend); TypeScript (dashboard) + SDK: httpx (async, batched, fire-and-forget). (001-agentreplay-v1)
+- Postgres — NeonDB hosted; local Postgres container under compose. (001-agentreplay-v1)
+
+## Recent Changes
+- 001-agentreplay-v1: Added Python 3.11+ (SDK + backend); TypeScript (dashboard) + SDK: httpx (async, batched, fire-and-forget).

@@ -1,0 +1,349 @@
+openapi: 3.1.0
+info:
+  title: AgentReplay API
+  version: "1.0.0"
+  description: >
+    Ingest, browse, fork, analyze, and detect over recorded agent runs.
+    Data shapes obey docs/DATA_CONTRACT.md verbatim. All endpoints require
+    the single static API key (scope guard: no further auth in V1).
+
+servers:
+  - url: http://localhost:8000
+    description: local compose stack (backend service)
+
+security:
+  - staticApiKey: []
+
+paths:
+  /ingest:
+    post:
+      operationId: ingestBatch
+      summary: Ingest a batch of recorded events (run upsert + step inserts)
+      description: >
+        Idempotent per research R2 — run header fields are upserted; steps are
+        insert-only under UNIQUE (run_id, seq). Invalid or duplicate items are
+        rejected per-item; valid items persist.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestBatch"
+      responses:
+        "200":
+          description: Batch processed (per-item results; partial acceptance possible)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestResult"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /runs:
+    get:
+      operationId: listRuns
+      summary: List runs
+      parameters:
+        - { name: agent_id, in: query, required: false, schema: { type: string } }
+        - { name: session_id, in: query, required: false, schema: { type: string } }
+        - { name: status, in: query, required: false, schema: { $ref: "#/components/schemas/RunStatus" } }
+        - { name: limit, in: query, required: false, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: offset, in: query, required: false, schema: { type: integer, default: 0 } }
+      responses:
+        "200":
+          description: Runs, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Run" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /runs/{run_id}:
+    get:
+      operationId: getRun
+      summary: Get one run with its ordered steps
+      parameters:
+        - { name: run_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Run detail (steps ordered by seq; fork lineage included)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunDetail"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /runs/{run_id}/fork:
+    post:
+      operationId: forkRun
+      summary: Fork a run from a step with a modification
+      description: >
+        Creates a NEW run with parent_run_id and fork_step set (constitution I),
+        agent_id/session_id copied from the parent, containing exactly ONE new
+        llm_call step at seq 1 (single-shot, research R4).
+        Conversation-level replay (constitution II): the recorded llm_call.input
+        at the fork step is reconstructed, the modification applied, and the
+        model called live ONCE at temperature 0 unless overridden
+        (constitution IV). The engine does not walk subsequent parent steps or
+        re-execute agent code. If a replayed model ever emits a tool call it
+        is intercepted — positional match, then hash match, then typed mock;
+        never a real tool (constitution III; not exercised by Nestaro's
+        single-shot path, retained as the generality guarantee).
+      parameters:
+        - { name: run_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForkRequest"
+      responses:
+        "201":
+          description: Fork created and executed; returns the new run with steps
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunDetail"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Invalid fork request (e.g. no reconstructable llm_call context at-or-before fork_step); no fork run is created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /runs/{run_id}/analyze:
+    post:
+      operationId: analyzeRun
+      summary: Produce a root-cause analysis verdict for a run
+      description: >
+        Serializes the run, queries the analysis model (ANALYSIS_BASE_URL),
+        and stores the strict-JSON verdict at run_metadata.analysis
+        (constitution VI). On model/parse failure nothing is stored and an
+        error is returned.
+      parameters:
+        - { name: run_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Analysis verdict stored and returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisVerdict"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "502":
+          description: Analysis model unavailable or returned unparseable output; run unchanged
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /detect/sweep:
+    post:
+      operationId: detectSweep
+      summary: Run the detection sweep over recorded runs
+      description: >
+        Evaluates candidate runs (all non-running, non-fork runs, or the
+        given run_ids) for failures including semantic contradiction between
+        user intent and agent action. Stores verdicts at
+        run_metadata.detection and sets status to flagged on detected
+        contradictions (constitution VI). Runs with status=running and forked
+        runs (parent_run_id set) are excluded from default candidates.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                run_ids:
+                  type: array
+                  items: { type: string, format: uuid }
+                  description: Optional subset; omit to sweep all candidate runs
+              additionalProperties: false
+      responses:
+        "200":
+          description: Sweep results per run
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/SweepResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+components:
+  securitySchemes:
+    staticApiKey:
+      type: http
+      scheme: bearer
+      description: "Authorization: Bearer $AGENTREPLAY_API_KEY (single static key)"
+
+  responses:
+    Unauthorized:
+      description: Missing or wrong static API key
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Run not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ValidationError:
+      description: Body failed data-contract validation
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    RunStatus:
+      type: string
+      enum: [running, completed, failed, flagged]
+
+    StepType:
+      type: string
+      enum: [llm_call, tool_call, state_change]
+
+    Run:
+      type: object
+      required: [id, agent_id, session_id, status]
+      properties:
+        id: { type: string, format: uuid }
+        agent_id: { type: string }
+        session_id: { type: string }
+        status: { $ref: "#/components/schemas/RunStatus" }
+        parent_run_id: { type: [string, "null"], format: uuid }
+        fork_step: { type: [integer, "null"] }
+        run_metadata:
+          type: object
+          description: channel, business_id, detection verdict, analysis verdict, freeform
+        started_at: { type: string, format: date-time }
+        ended_at: { type: [string, "null"], format: date-time }
+
+    Step:
+      type: object
+      required: [id, run_id, seq, type, input, output]
+      properties:
+        id: { type: string, format: uuid }
+        run_id: { type: string, format: uuid }
+        seq: { type: integer, minimum: 1, description: 1-based per run; UNIQUE (run_id, seq) }
+        type: { $ref: "#/components/schemas/StepType" }
+        input: { type: object, description: verbatim; shape depends on type per docs/DATA_CONTRACT.md }
+        output: { type: object, description: verbatim; shape depends on type per docs/DATA_CONTRACT.md }
+        latency_ms: { type: [integer, "null"] }
+        tokens_in: { type: [integer, "null"], description: llm_call only }
+        tokens_out: { type: [integer, "null"], description: llm_call only }
+        created_at: { type: string, format: date-time }
+
+    RunDetail:
+      allOf:
+        - $ref: "#/components/schemas/Run"
+        - type: object
+          required: [steps]
+          properties:
+            steps:
+              type: array
+              items: { $ref: "#/components/schemas/Step" }
+              description: ordered by seq ascending
+
+    IngestBatch:
+      type: object
+      required: [run, steps]
+      properties:
+        run:
+          type: object
+          required: [id, agent_id, session_id, status]
+          properties:
+            id: { type: string, format: uuid }
+            agent_id: { type: string }
+            session_id: { type: string }
+            status: { $ref: "#/components/schemas/RunStatus" }
+            run_metadata: { type: object }
+            started_at: { type: string, format: date-time }
+            ended_at: { type: [string, "null"], format: date-time }
+        steps:
+          type: array
+          items:
+            type: object
+            required: [seq, type, input, output]
+            properties:
+              seq: { type: integer, minimum: 1 }
+              type: { $ref: "#/components/schemas/StepType" }
+              input: { type: object }
+              output: { type: object }
+              latency_ms: { type: [integer, "null"] }
+              tokens_in: { type: [integer, "null"] }
+              tokens_out: { type: [integer, "null"] }
+              created_at: { type: string, format: date-time }
+
+    IngestResult:
+      type: object
+      required: [run_id, accepted, rejected]
+      properties:
+        run_id: { type: string, format: uuid }
+        accepted: { type: integer, description: steps persisted }
+        rejected:
+          type: array
+          description: per-item rejections (duplicate seq, contract violation)
+          items:
+            type: object
+            required: [seq, error]
+            properties:
+              seq: { type: integer }
+              error: { type: string }
+
+    ForkRequest:
+      type: object
+      required: [fork_step, modification]
+      properties:
+        fork_step:
+          type: integer
+          minimum: 1
+          description: seq in the parent where the fork diverges
+        modification:
+          type: object
+          description: the change to apply to the reconstructed llm_call.input
+          properties:
+            system_prompt:
+              type: string
+              description: replaces the system message content at the fork point
+          additionalProperties: true
+        temperature:
+          type: [number, "null"]
+          description: optional override; forked LLM calls run at 0 when omitted (constitution IV)
+
+    AnalysisVerdict:
+      type: object
+      required: [failing_step, root_cause, suggested_fix]
+      properties:
+        failing_step: { type: integer }
+        root_cause: { type: string }
+        suggested_fix: { type: string }
+
+    DetectionVerdict:
+      type: object
+      required: [verdict, reason]
+      properties:
+        verdict: { type: string, enum: [pass, fail] }
+        reason: { type: string }
+        contradiction:
+          type: [object, "null"]
+          properties:
+            user_intent: { type: string }
+            agent_action: { type: string }
+
+    SweepResult:
+      type: object
+      required: [run_id, detection]
+      properties:
+        run_id: { type: string, format: uuid }
+        detection: { $ref: "#/components/schemas/DetectionVerdict" }
+        status_after: { $ref: "#/components/schemas/RunStatus" }
+
+    Error:
+      type: object
+      required: [detail]
+      properties:
+        detail: { type: string }
