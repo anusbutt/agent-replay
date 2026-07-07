@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+
+# Node / Next.js
+node_modules/
+dashboard/.next/
+dashboard/out/
+*.tsbuildinfo
+npm-debug.log*
+
+# Env & secrets — never commit real values (.env.example is tracked)
+.env
+.env.*
+!.env.example
+
+# Editor / OS junk
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+.idea/
+.vscode/
