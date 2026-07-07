@@ -1,0 +1,51 @@
+# AgentReplay local stack — exactly three services, one container per service
+# (constitution VII: never a single combined "monster" image).
+# `docker compose up` wires up backend + frontend + db from a clean checkout.
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://agentreplay:agentreplay@db:5432/agentreplay
+      AGENTREPLAY_API_KEY: ${AGENTREPLAY_API_KEY:-dev-key}
+      ANALYSIS_BASE_URL: ${ANALYSIS_BASE_URL:-}
+      ANALYSIS_API_KEY: ${ANALYSIS_API_KEY:-}
+      REPLAY_BASE_URL: ${REPLAY_BASE_URL:-https://openrouter.ai/api/v1}
+      REPLAY_API_KEY: ${REPLAY_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+      AGENTREPLAY_API_KEY: ${AGENTREPLAY_API_KEY:-dev-key}
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: agentreplay
+      POSTGRES_PASSWORD: agentreplay
+      POSTGRES_DB: agentreplay
+    ports:
+      - "5432:5432"
+    volumes:
+      - agentreplay_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentreplay -d agentreplay"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  agentreplay_pgdata:
