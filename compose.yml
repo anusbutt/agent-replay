@@ -23,11 +23,20 @@ services:
     build:
       context: ./dashboard
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
+        NEXT_PUBLIC_AGENTREPLAY_API_KEY: ${AGENTREPLAY_API_KEY:-dev-key}
     ports:
       - "3000:3000"
     environment:
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000}
-      AGENTREPLAY_API_KEY: ${AGENTREPLAY_API_KEY:-dev-key}
+      # Server Components run inside this container — "localhost" there means
+      # itself, not the backend container, so SSR fetches need the Docker
+      # network hostname. Browser-side calls still use the build-time
+      # NEXT_PUBLIC_API_BASE_URL (host-published port).
+      API_BASE_URL_INTERNAL: http://backend:8000
+      # Node's undici fetch tries IPv6 first on the Docker bridge network and
+      # gets ECONNREFUSED (backend only binds IPv4); force IPv4-first resolution.
+      NODE_OPTIONS: --dns-result-order=ipv4first
     depends_on:
       - backend
 
