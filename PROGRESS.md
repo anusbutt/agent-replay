@@ -90,3 +90,66 @@ Verification: 8/8 contract tests pass on host venv AND inside backend container
 seeded against rebuilt backend container.
 
 blocked: none — awaiting maintainer validation before Phase 3 (US1, T016–T031)
+
+## Session 2026-07-08 — Phase 3: US1 MVP (T016–T030 done; T031 deferred)
+
+- T-16 done: tests/integration/test_detection.py — respx-stubbed sweep flags contradictory run + writes detection verdict; unparseable model output writes nothing (SweepResult.detection=None, error set) | blocked: none
+- T-17 done: tests/integration/test_analysis.py — respx-stubbed analyze stores {failing_step,root_cause,suggested_fix}; 502 + run unchanged on model failure | blocked: none
+- T-18 done: tests/integration/test_fork.py — respx-stubbed fork creates new run (parent_run_id+fork_step, single llm_call seq 1, temp 0 default + override), parent byte-identical before/after, 422 on no reconstructable llm_call context | blocked: none
+- T-19 done: app/analysis/client.py — OpenAI-compatible chat_completion() on ANALYSIS_BASE_URL/ANALYSIS_API_KEY | blocked: none
+- T-20 done: app/analysis/serializer.py — steps -> compact transcript for judge prompts | blocked: none
+- T-21 done: app/analysis/prompts.py — strict-JSON detection/analysis prompts + defensive extract_json_object() | blocked: none
+- T-22 done: POST /detect/sweep in app/routers/detection.py — candidate selection (skip running/forked), verdict merge, flagged on fail, per-run error isolation | blocked: none
+- T-23 done: POST /runs/{id}/analyze in app/routers/analysis.py — 502 + unchanged run on model/parse failure | blocked: none
+- T-24 done: app/replay/interceptor.py — canonical_json + sha256 hash, positional -> hash -> typed mock resolution order, no code path to real tool execution | blocked: none
+- T-25 done: app/replay/engine.py — single-shot fork: nearest llm_call at-or-before fork_step, system_prompt modification, ONE live call via REPLAY_BASE_URL at temp 0 (override honored), fork run marked completed/failed | blocked: none
+- T-26 done: POST /runs/{id}/fork in app/routers/fork.py — 422 + no fork row when no reconstructable llm_call context | blocked: none
+- T-27 done: dashboard/src/lib/api.ts — typed client for all 5 endpoints, types mirroring openapi contract | blocked: none
+- T-28 done: dashboard/src/app/page.tsx — runs list with status badges, fork lineage indicator | blocked: none
+- T-29 done: dashboard/src/app/runs/[id]/page.tsx + TimelineStep.tsx + VerdictBadge.tsx — seq-ordered expandable timeline, detection/analysis verdict cards | blocked: none
+- T-30 done: ForkPanel.tsx (prefilled system prompt + suggested_fix) + CompareView.tsx (parent-labeled step-K + subsequent tool_calls vs fork's single step) wired into run detail page | blocked: none
+
+Verification: 16/16 backend tests pass on host venv AND in-container
+(docker compose exec backend pytest). `npm run build` compiles clean
+(TypeScript, no errors). Manual UI verification performed with a throwaway
+local mock OpenAI-compatible server (NOT part of the deliverable) standing in
+for ANALYSIS_BASE_URL/REPLAY_BASE_URL — confirmed via rendered HTML that the
+runs list, timeline, detection/analysis verdict cards, and fork+CompareView
+all render correctly against real HTTP round-trips through the actual
+backend code and a real Postgres row.
+
+Bugs found and fixed during this phase (all in code/tests authored THIS
+phase, none in pre-existing tests):
+1. tests/integration/test_fork.py — session_id collision caused false
+   positive on re-run (test-isolation bug in my own new test); fixed with a
+   per-invocation unique session_id.
+2. dashboard/src/lib/api.ts + compose.yml — frontend container returned
+   HTTP 500 on every page: Server Components run inside the frontend
+   container where `localhost:8000` resolves to itself, not the backend
+   container. Fixed by adding a server-only `API_BASE_URL_INTERNAL` env var
+   (Docker network hostname `http://backend:8000`) used only when
+   `typeof window === "undefined"`, while client-side calls keep using the
+   build-time `NEXT_PUBLIC_API_BASE_URL`. Also required `NODE_OPTIONS=
+   --dns-result-order=ipv4first` (Node/undici IPv6-first fetch bug on the
+   Docker bridge network) and a `--no-cache` rebuild — a cached image layer
+   was silently serving stale code after a normal `--build`.
+3. tests/integration/test_{detection,analysis,fork}.py — the ANALYSIS_/
+   REPLAY_BASE_URL env-var helpers used `os.environ.setdefault(...)`, which
+   is a no-op when the container already sets the var (even to "" via
+   compose's `${VAR:-}` default) — desyncing the respx mock target from what
+   the app actually calls. Fixed by force-setting the env var instead of
+   defaulting. Caused 2 false failures when run in-container (passed on host
+   where the var was truly unset) — root-caused and fixed, not skipped.
+4. Deleted ~105 runs of test-created data that had accumulated in the shared
+   compose `db` volume under agent_id="nestaro"/"nestaro-test" (host pytest
+   runs share the same Postgres as the demo seed by design — no separate
+   test DB in V1). Kept only the one real seeded demo run
+   (11111111-1111-4111-8111-111111111111) so the dashboard/T031 demo isn't
+   cluttered.
+
+T-031 NOT done: requires real ANALYSIS_BASE_URL/ANALYSIS_API_KEY (Gemma on
+AMD MI300X vLLM or Fireworks fallback) and REPLAY_BASE_URL/REPLAY_API_KEY
+(OpenRouter) — maintainer confirmed these aren't ready yet; deferred by
+maintainer decision, to be run once credentials are available.
+
+blocked: T-031 blocked on real ANALYSIS_BASE_URL/REPLAY_BASE_URL credentials
