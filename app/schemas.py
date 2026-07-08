@@ -108,8 +108,9 @@ class DetectionVerdict(BaseModel):
 
 class SweepResult(BaseModel):
     run_id: uuid.UUID
-    detection: DetectionVerdict
+    detection: DetectionVerdict | None = None
     status_after: RunStatus
+    error: str | None = None  # set on judge/parse failure; detection is None and nothing was stored
 
 
 class Error(BaseModel):
