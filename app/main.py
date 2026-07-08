@@ -38,7 +38,10 @@ def health() -> dict[str, bool]:
     return {"ok": True}
 
 
-from app.routers import ingest, runs  # noqa: E402
+from app.routers import analysis, detection, fork, ingest, runs  # noqa: E402
 
 app.include_router(ingest.router, dependencies=[Depends(require_api_key)])
 app.include_router(runs.router, dependencies=[Depends(require_api_key)])
+app.include_router(fork.router, dependencies=[Depends(require_api_key)])
+app.include_router(analysis.router, dependencies=[Depends(require_api_key)])
+app.include_router(detection.router, dependencies=[Depends(require_api_key)])
