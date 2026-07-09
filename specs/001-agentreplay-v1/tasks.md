@@ -96,7 +96,7 @@ the seeded fixture (no SDK needed — spec assumption allows seeded runs).
 - [X] T028 [US1] Build runs list page `dashboard/src/app/page.tsx`: agent_id, session_id, status badges (flagged/failed highlighted), timing, fork lineage indicator (FR-010)
 - [X] T029 [US1] Build run detail page `dashboard/src/app/runs/[id]/page.tsx` + `dashboard/src/components/TimelineStep.tsx` + `dashboard/src/components/VerdictBadge.tsx`: timeline in seq order with type-appropriate verbatim payload rendering (expandable, unsummarized) and detection/analysis verdict display (FR-011, FR-013)
 - [X] T030 [US1] Build fork + compare UI: `dashboard/src/components/ForkPanel.tsx` (pick step, edit system prompt prefilled from recorded input + suggested_fix, optional temperature) and `dashboard/src/components/CompareView.tsx` (side-by-side per research R4 single-shot: the fork's assistant text rendered against the parent's step-K text AND the parent's subsequent tool_call step(s), parent steps clearly labeled as parent-origin — the proof is the flipped decision, saturday → friday) wired into run detail page (FR-012)
-- [ ] T031 [US1] End-to-end acceptance against live compose stack: run quickstart.md steps 1–6 (up → seed → sweep → analyze → fork → compare) with real ANALYSIS_BASE_URL and REPLAY_BASE_URL; verify SC-001 and record evidence (run ids, screenshots) in PROGRESS.md
+- [X] T031 [US1] End-to-end acceptance against live compose stack: run quickstart.md steps 1–6 (up → seed → sweep → analyze → fork → compare) with real ANALYSIS_BASE_URL and REPLAY_BASE_URL; verify SC-001 and record evidence (run ids, screenshots) in PROGRESS.md
 
 **Checkpoint**: The demo works — MVP complete (SC-001)
 

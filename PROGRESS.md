@@ -153,3 +153,71 @@ AMD MI300X vLLM or Fireworks fallback) and REPLAY_BASE_URL/REPLAY_API_KEY
 maintainer decision, to be run once credentials are available.
 
 blocked: T-031 blocked on real ANALYSIS_BASE_URL/REPLAY_BASE_URL credentials
+
+## Session 2026-07-09 — T031: real end-to-end SC-001 demo (Phase 3 complete)
+
+Ran quickstart.md steps 1–6 against the live containerized compose stack
+(backend/frontend/db all `docker compose ps` = running) with REAL inference:
+ANALYSIS_BASE_URL=REPLAY_BASE_URL=https://openrouter.ai/api/v1 (maintainer's
+OpenRouter key, confirmed via AskUserQuestion to reuse for both analysis and
+fork since no separate Gemma/MI300X or Fireworks endpoint was available).
+Analysis model bumped from a guessed `google/gemma-3-27b-it` to the verified-
+available `google/gemma-4-31b-it` (queried OpenRouter's live /models catalog
+— exact "Gemma 4" match per spec). Fork calls reuse the recorded model id
+`deepseek/deepseek-chat` (also verified present on OpenRouter), per research
+R6.
+
+**Fixture bug found and fixed**: the first sweep attempt returned
+`verdict: "pass"` from the real judge — scripts/seed_demo_run.py's original
+fixture had a later customer turn ("ok sure, book it") plus a state_change
+`trigger: "user_confirmed"` that genuinely read as the customer consenting to
+Saturday, undermining the intended contradiction. This was a legitimate
+judgment by the real model, not a bug in the judge. Fixed by removing the
+consenting follow-up turn and renaming the trigger to `agent_selected_slot`
+(the agent proceeded to book without the customer ever confirming Saturday
+specifically) — re-seeded (deleted+re-ingested the fixed UUID run) and the
+sweep then correctly flagged it.
+
+**Evidence** (real inference, no stubs):
+
+- Demo run: `11111111-1111-4111-8111-111111111111` (agent_id=nestaro,
+  session_id=fbm-24601), 4 steps: state_change → llm_call (seq 2, FAILING) →
+  state_change → tool_call (books saturday 14:00).
+- `POST /detect/sweep` → `{"verdict": "fail", "reason": "The user explicitly
+  requested duct cleaning for Friday, but the agent booked the appointment
+  for Saturday.", "contradiction": {"user_intent": "duct cleaning Friday",
+  "agent_action": "booked Saturday at 2:00 PM"}}`; run status → `flagged`.
+- `POST /runs/{id}/analyze` → `{"failing_step": 2, "root_cause": "The agent
+  ignored the user's explicit request for Friday and unilaterally booked a
+  Saturday slot based on the system prompt's preference for efficiency,
+  violating user intent.", "suggested_fix": "Add to system prompt: 'While you
+  should prefer offering Saturday slots to keep the schedule efficient, you
+  must always prioritize and honor the specific day requested by the
+  customer if they provide one.'"}` — failing_step 2 exists in the run
+  (matches the seq-2 llm_call) — SC-007 satisfied.
+- `POST /runs/{id}/fork` with the suggested fix applied to the system prompt,
+  fork_step=2 → fork run `b767d013-6c22-4e7a-ae45-c55e36d6c033`
+  (parent_run_id=demo run, fork_step=2, agent_id/session_id copied from
+  parent), exactly ONE stored step (seq 1, llm_call, temperature=0 recorded
+  in input), zero tool_call steps. Live model reply: **"Perfect! I can book
+  you for this Friday. We have morning or afternoon slots available—which
+  works best for you?"** — the decision flipped Saturday → Friday. SC-001
+  proof achieved with real inference (not a stub).
+- Parent immutability (SC-005) verified after the fork: parent run status
+  still `flagged`, still exactly 4 steps, detection/analysis verdicts intact
+  and unchanged.
+- Dashboard CompareView (http://localhost:3000/runs/b767d013-...) confirmed
+  via rendered HTML: parent-labeled step-2 text ("...locked in Saturday at
+  2:00 PM...") and the parent's subsequent tool_call (book_appointment
+  day=saturday, labeled parent-origin) shown alongside the fork's Friday
+  reply, with "No tool call — the fork never re-books anything" — FR-012
+  satisfied.
+- Zero real tool executions across the fork (SC-004): fork run has exactly
+  one step, type llm_call, no tool_call steps present.
+
+SC-001 through SC-005, SC-006, SC-007 all verified against the live
+containerized stack with real model inference. SC-008 (docker compose up
+from clean checkout) was verified structurally in Phase 1; full clean-clone
+re-verification remains Phase 7 polish (T049).
+
+blocked: none — Phase 3 (US1, the MVP) is fully complete, T016–T031 all done.
