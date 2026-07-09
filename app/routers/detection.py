@@ -5,8 +5,8 @@ import uuid
 from fastapi import APIRouter, Body, Depends
 from sqlmodel import Session, select
 
-from app.analysis.client import chat_completion
-from app.analysis.prompts import build_detection_messages, extract_json_object
+from app.analysis.client import query_judge
+from app.analysis.prompts import build_detection_messages
 from app.analysis.serializer import serialize_run
 from app.db import get_session
 from app.models import Run, RunStatus, Step
@@ -36,9 +36,7 @@ def detect_sweep(
         transcript = serialize_run(steps)
 
         try:
-            raw = chat_completion(build_detection_messages(transcript))
-            parsed = extract_json_object(raw)
-            verdict = DetectionVerdict.model_validate(parsed)
+            verdict = query_judge(build_detection_messages(transcript), DetectionVerdict)
         except Exception as exc:  # defensive: judge/network/parse failures per research R5
             results.append(
                 SweepResult(

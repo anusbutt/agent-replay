@@ -5,8 +5,8 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
-from app.analysis.client import AnalysisClientError, chat_completion
-from app.analysis.prompts import build_analysis_messages, extract_json_object
+from app.analysis.client import AnalysisClientError, query_judge
+from app.analysis.prompts import build_analysis_messages
 from app.analysis.serializer import serialize_run
 from app.db import get_session
 from app.models import Run, Step
@@ -25,9 +25,7 @@ def analyze_run(run_id: uuid.UUID, session: Session = Depends(get_session)) -> A
     transcript = serialize_run(steps)
 
     try:
-        raw = chat_completion(build_analysis_messages(transcript))
-        parsed = extract_json_object(raw)
-        verdict = AnalysisVerdict.model_validate(parsed)
+        verdict = query_judge(build_analysis_messages(transcript), AnalysisVerdict)
     except AnalysisClientError as exc:
         raise HTTPException(status_code=502, detail=f"analysis model unavailable: {exc}") from exc
     except Exception as exc:  # defensive parse per research R5

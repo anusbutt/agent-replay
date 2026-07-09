@@ -5,12 +5,41 @@ fallback is an env-var swap only — no code change (constitution: fixed stack).
 """
 
 import os
+from typing import TypeVar
 
 import httpx
+from pydantic import BaseModel
+
+from app.analysis.prompts import extract_json_object
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class AnalysisClientError(Exception):
     """Raised when the analysis endpoint is unavailable or errors."""
+
+
+def query_judge(messages: list[dict], verdict_cls: type[T], *, max_attempts: int = 2) -> T:
+    """Call the judge model, extract+validate strict JSON, retrying once on
+    parse/validation failure before giving up.
+
+    LLM structured-output calls occasionally produce malformed JSON (a
+    missing/null required field) even at temperature 0 — a single retry
+    absorbs that flakiness without weakening the "never write garbage"
+    guarantee: after max_attempts, the last error still propagates and the
+    caller stores nothing (research R5 edge case).
+    """
+    last_exc: Exception | None = None
+    for _ in range(max_attempts):
+        try:
+            raw = chat_completion(messages)
+            parsed = extract_json_object(raw)
+            return verdict_cls.model_validate(parsed)
+        except Exception as exc:  # noqa: BLE001 — retry on any parse/validation/client failure
+            last_exc = exc
+            continue
+    assert last_exc is not None
+    raise last_exc
 
 
 def chat_completion(messages: list[dict], *, model: str = "google/gemma-4-31b-it") -> str:
