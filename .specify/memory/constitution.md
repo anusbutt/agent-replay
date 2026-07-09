@@ -133,8 +133,9 @@ in ROADMAP.md, never in code.
 - Stack is fixed (do not substitute): Python 3.11+ SDK with httpx; FastAPI +
   SQLModel backend; NeonDB (Postgres) with fixed columns for structure and
   JSONB for payloads; Next.js + TypeScript dashboard with Tailwind only;
-  analysis inference via Gemma on vLLM/AMD MI300X with Fireworks fallback,
-  switched by `ANALYSIS_BASE_URL` env var only. No LangChain, no LangGraph, no
+  analysis inference via Gemma 4 on OpenRouter (AMD-hardware-hosted
+  inference via Fireworks AI is the intended production target once
+  deployed), switched by `ANALYSIS_BASE_URL` env var only. No LangChain, no LangGraph, no
   ORMs other than SQLModel, no message queues.
 - One task from tasks.md per session; done = the task's acceptance criteria
   pass, verified by actually running them (pytest / curl / stated check).

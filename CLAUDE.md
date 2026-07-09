@@ -229,9 +229,9 @@ agent for home service businesses.
 - Backend: FastAPI + SQLModel, deployed on Railway
 - DB: NeonDB (Postgres). Fixed columns for structure, JSONB for payloads
 - Dashboard: Next.js + TypeScript on Vercel. No UI library beyond Tailwind
-- Analysis inference: Gemma 4 served by vLLM on AMD MI300X (AMD Developer
-  Cloud), OpenAI-compatible endpoint. Fallback: same Gemma 4 family via
-  Fireworks API. Switch = ANALYSIS_BASE_URL env var only
+- Analysis inference: Gemma 4 via OpenRouter, OpenAI-compatible endpoint.
+  AMD-hardware-hosted inference via Fireworks AI is the intended production
+  target once deployed there. Switch = ANALYSIS_BASE_URL env var only
 - No LangChain, no LangGraph, no ORMs other than SQLModel, no message queues
 
 ## Architecture in one paragraph

@@ -12,7 +12,7 @@ cp .env.example .env
 # fill in:
 # DATABASE_URL          — set automatically for compose; NeonDB URL for hosted
 # AGENTREPLAY_API_KEY   — the single static API key
-# ANALYSIS_BASE_URL     — Gemma vLLM endpoint (AMD MI300X) or Fireworks fallback
+# ANALYSIS_BASE_URL     — Gemma 4 endpoint via OpenRouter (Fireworks/AMD-hosted target once deployed)
 # ANALYSIS_API_KEY      — key for the analysis endpoint
 # REPLAY_BASE_URL       — OpenAI-compatible endpoint for forked LLM calls (default OpenRouter)
 # REPLAY_API_KEY        — key for the replay endpoint

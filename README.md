@@ -30,8 +30,9 @@ call at the chosen step, at temperature 0, with the fix applied. A tool
 interceptor guarantees a forked run never executes a real tool, matching a
 cached result positionally or by content hash before falling back to a
 typed mock. An analysis layer sends serialized runs to an LLM judge (Gemma
-on vLLM/AMD MI300X, OpenRouter/Fireworks as swappable OpenAI-compatible
-fallbacks) for detection and root-cause verdicts, stored as JSONB on the
+4 via OpenRouter, an OpenAI-compatible endpoint — AMD-hardware-hosted
+inference via Fireworks AI is the intended production target once deployed
+there) for detection and root-cause verdicts, stored as JSONB on the
 run's own metadata.
 
 ## Getting started
@@ -59,7 +60,7 @@ container-specific code paths (constitution Principle VII).
 |---|---|---|
 | `DATABASE_URL` | Postgres connection string | set by `compose.yml` for the local stack; NeonDB URL for hosted |
 | `AGENTREPLAY_API_KEY` | The single static API key protecting every backend endpoint | none — must be set |
-| `ANALYSIS_BASE_URL` | OpenAI-compatible endpoint for detection/analysis (Gemma on vLLM/AMD MI300X; swap to Fireworks or another provider by changing this URL only) | none — must be set |
+| `ANALYSIS_BASE_URL` | OpenAI-compatible endpoint for detection/analysis (Gemma 4 via OpenRouter; AMD-hardware-hosted via Fireworks AI is the intended production target once deployed; swap providers by changing this URL only) | `https://openrouter.ai/api/v1` |
 | `ANALYSIS_API_KEY` | Key for the analysis endpoint | none — must be set |
 | `REPLAY_BASE_URL` | OpenAI-compatible endpoint for forked LLM calls | `https://openrouter.ai/api/v1` |
 | `REPLAY_API_KEY` | Key for the replay/fork endpoint | none — must be set |
@@ -77,8 +78,8 @@ Docker network, distinct from the browser-facing URL.
 
 Python 3.11+ SDK (httpx only) · FastAPI + SQLModel backend · Postgres
 (NeonDB hosted, local container via compose) · Next.js + TypeScript +
-Tailwind dashboard · Gemma on vLLM (AMD MI300X) for analysis, with an
-OpenAI-compatible fallback. No LangChain, no LangGraph, no ORM beyond
+Tailwind dashboard · Gemma 4 via OpenRouter for analysis, an
+OpenAI-compatible endpoint. No LangChain, no LangGraph, no ORM beyond
 SQLModel, no message queues — see `.specify/memory/constitution.md` for the
 full set of pinned decisions this project doesn't re-litigate.
 

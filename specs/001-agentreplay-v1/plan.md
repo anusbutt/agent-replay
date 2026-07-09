@@ -12,8 +12,10 @@ by Postgres; a Next.js dashboard renders run timelines; a replay engine forks
 a run from any step with a modification, executing a single live LLM call at
 temperature 0 (research R4 single-shot; tool-interception machinery —
 positional → hash → typed mock, never real — guards any tool-emitting
-replay); an analysis layer (Gemma 4 on vLLM/MI300X, OpenAI-compatible)
-produces detection and root-cause verdicts stored on `run_metadata`. The
+replay); an analysis layer (Gemma 4 via OpenRouter, OpenAI-compatible;
+AMD-hardware-hosted via Fireworks AI is the intended production target
+once deployed) produces detection and root-cause verdicts stored on
+`run_metadata`. The
 north-star acceptance path is the Nestaro Friday/Saturday scenario: detect →
 analyze → fork with fix → side-by-side comparison. Delivery is containerized:
 three compose services (backend, frontend, db) wired by `docker compose up`.
@@ -23,9 +25,10 @@ three compose services (backend, frontend, db) wired by `docker compose up`.
 **Language/Version**: Python 3.11+ (SDK + backend); TypeScript (dashboard)
 **Primary Dependencies**: SDK: httpx (async, batched, fire-and-forget).
 Backend: FastAPI + SQLModel. Dashboard: Next.js + Tailwind (no other UI
-libs). Analysis/detection inference: Gemma 4 served by vLLM on AMD MI300X (AMD
-Developer Cloud), OpenAI-compatible endpoint; fallback same Gemma 4 family via
-Fireworks API; switch = `ANALYSIS_BASE_URL` env var only. Forbidden: LangChain,
+libs). Analysis/detection inference: Gemma 4 via OpenRouter,
+OpenAI-compatible endpoint (AMD-hardware-hosted via Fireworks AI is the
+intended production target once deployed); switch = `ANALYSIS_BASE_URL`
+env var only. Forbidden: LangChain,
 LangGraph, ORMs other than SQLModel, message queues.
 **Storage**: Postgres — NeonDB hosted; local Postgres container under compose.
 Fixed columns for structure, JSONB for payloads (per docs/DATA_CONTRACT.md).
@@ -61,7 +64,7 @@ tools; single static API key; scope guard (NOT-in-V1 list) is law.
 | G7 | VII. Docker: per-service containers, `docker compose up` wires backend + frontend + db; never a monster image | Root `Dockerfile` (backend), `dashboard/Dockerfile` (frontend), root `compose.yml` with three services; env-var-only config | PASS |
 | G8 | Data Contract Supremacy | `app/models.py` mirrors docs/DATA_CONTRACT.md field-for-field; ingest validates payload shapes; tests assert them | PASS |
 | G9 | Scope Guard (NOT-in-V1) | No auth beyond static key, no multi-tenant UI, no rate limiting, no OTel, no framework integrations, no streaming ingestion, no one-click deploy anywhere in this plan | PASS |
-| G10 | Fixed stack | FastAPI/SQLModel/NeonDB/Next.js/Tailwind/httpx/vLLM-Gemma 4 exactly as pinned; nothing substituted | PASS |
+| G10 | Fixed stack | FastAPI/SQLModel/NeonDB/Next.js/Tailwind/httpx/Gemma 4 (OpenRouter; AMD-hardware-hosted via Fireworks AI intended once deployed) exactly as pinned; nothing substituted | PASS |
 
 **Initial gate result: PASS (no violations, Complexity Tracking empty).**
 **Post-design re-check (after Phase 1): PASS — data-model.md is a 1:1
