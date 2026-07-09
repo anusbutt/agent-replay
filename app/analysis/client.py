@@ -13,7 +13,7 @@ class AnalysisClientError(Exception):
     """Raised when the analysis endpoint is unavailable or errors."""
 
 
-def chat_completion(messages: list[dict], *, model: str = "google/gemma-3-27b-it") -> str:
+def chat_completion(messages: list[dict], *, model: str = "google/gemma-4-31b-it") -> str:
     """POST /chat/completions to ANALYSIS_BASE_URL; returns the assistant content string."""
     base_url = os.environ["ANALYSIS_BASE_URL"]
     api_key = os.environ.get("ANALYSIS_API_KEY", "")
