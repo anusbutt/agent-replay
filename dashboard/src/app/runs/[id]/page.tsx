@@ -57,9 +57,11 @@ export default async function RunDetailPage({
         </p>
       )}
 
-      <div className="mt-6">
-        <RunActions runId={run.id} />
-      </div>
+      {!run.parent_run_id && (
+        <div className="mt-6">
+          <RunActions runId={run.id} status={run.status} />
+        </div>
+      )}
 
       {(detection || analysis) && (
         <div className="mt-6 space-y-3">
