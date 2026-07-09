@@ -221,3 +221,48 @@ from clean checkout) was verified structurally in Phase 1; full clean-clone
 re-verification remains Phase 7 polish (T049).
 
 blocked: none — Phase 3 (US1, the MVP) is fully complete, T016–T031 all done.
+
+## Session 2026-07-09 (cont'd) — Phase 4: US2 SDK (T032–T039, all done)
+
+- T-32 done: tests/unit/test_sdk_buffer.py — contiguous 1-based seq, IngestBatch shape, drain semantics | blocked: none
+- T-33 done: tests/unit/test_sdk_wrapper.py — verbatim llm_call recording (incl. history message in position, headers), latency/tokens populated, no-Authorization-key-at-any-level assertion | blocked: none
+- T-34 done: tests/integration/test_sdk_never_raises.py — dead port + respx-mocked 500 server + pre-init no-op, all complete without raising | blocked: none
+- T-35 done: sdk/agentreplay/__init__.py — init/wrap/tool/record_state_change/flush/end_run public API, module-level _state singleton, AUTO_FLUSH_THRESHOLD=10; sdk/pyproject.toml (httpx only runtime dep) | blocked: none
+- T-36 done: sdk/agentreplay/buffer.py (seq assignment, IngestBatch shaping) + transport.py (httpx POST /ingest, every exception + non-2xx response swallowed and logged) | blocked: none
+- T-37 done: sdk/agentreplay/wrapper.py — replay.wrap(client) records verbatim request/response via duck-typed .model_dump()/.to_dict(), recursive Authorization redaction at any nesting depth (FR-027), real call behavior never altered | blocked: none
+- T-38 done: sdk/agentreplay/tool.py (@replay.tool, inspect.signature-bound args) + state.py (record_state_change) | blocked: none
+- T-39 done: scripts/demo_agent.py — minimal hand-rolled OpenAI-compatible client (httpx only, no `openai` dependency, proves wrap() is duck-typed-generic), real conversation against OpenRouter, instrumented end-to-end, ends with end_run() | blocked: none
+
+Design decision (not pre-specified, resolved during implementation): the SDK
+buffers every event in memory (no network) and only performs actual network
+I/O synchronously inside flush() (auto-triggered at AUTO_FLUSH_THRESHOLD=10
+buffered steps, or explicitly via flush()/end_run()) — chosen over a
+background-thread/async-fire-and-forget design for determinism and
+testability (T034's dead-port/erroring-server assertions are flake-free),
+while still satisfying "buffer in memory, deliver in batches, errors never
+propagate" (FR-004/FR-005). Documented inline in transport.py/buffer.py.
+
+**Verification — T039 acceptance, run against the LIVE containerized stack
+with real OpenRouter inference (same key as T031)**:
+- AS-1/AS-3: `python scripts/demo_agent.py` (PYTHONPATH=sdk) → real LLM
+  reply ("Got it! Let's book your duct cleaning for Friday...") + real tool
+  booking; run `690be766-fb5b-4d74-a33c-a35ebf432888` reached
+  `status=completed`, all 4 steps (state_change, llm_call, state_change,
+  tool_call) visible via GET /runs/{id} in seq order, llm_call.input/output
+  verbatim (including full OpenRouter usage/cost breakdown), tokens_in=47/
+  tokens_out=25 populated, zero "Authorization" key anywhere in input.
+- AS-2: `docker compose stop backend` → re-ran demo_agent.py → exit code 0,
+  the real LLM call and tool still completed normally, only a locally-logged
+  warning ("agentreplay: failed to deliver batch: [Errno 111] Connection
+  refused") — no exception surfaced to the host script. Backend restarted
+  and confirmed healthy afterward.
+
+26/26 tests pass (16 backend + 10 SDK), host venv. Cleaned test-polluted db
+rows (host pytest reruns during SDK work) three more times this session,
+keeping only: the T031 demo pair + the one real demo_agent run, as evidence.
+
+**Phase 4 checkpoint met: live recording works end-to-end; invisibility
+guarantee proven with a real backend outage, not just a mock.**
+
+blocked: none — Phase 4 (US2) complete. Next: Phase 5 (US3, detection at
+scale, T040–T042) or Phase 6 (US4, fork safety proof, T043–T046).
