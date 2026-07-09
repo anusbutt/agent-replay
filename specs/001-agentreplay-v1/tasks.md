@@ -169,13 +169,13 @@ executions everywhere.
 
 ### Tests for User Story 4 (write first, must fail) ⚠️
 
-- [ ] T043 [P] [US4] Unit tests in `tests/unit/test_canonical_json.py`: fixed vectors for canonical_json (key order, unicode, nesting) and sha256(name + canonical_json(args)) exact digests (research R3)
-- [ ] T044 [P] [US4] Integration test in `tests/integration/test_interception_tiers.py`, driving `app/replay/interceptor.py` DIRECTLY against a seeded parent run's tool_call steps (not via the fork endpoint — Nestaro's single-shot forks emit no tool calls, research R4): (a) positional match by (run_id, seq) returns parent cached result; (b) seq mismatch but same name+args → hash fallback returns cached result; (c) unknown tool/args → typed mock {"result": {"mocked": true}, "error": null}; a sentinel real-tool spy proves zero real executions in all cases (US4 AS-1, constitution III)
-- [ ] T045 [P] [US4] Integration test in `tests/integration/test_fork_safety.py`: forked llm_call.input records temperature 0 by default and the override value when given (US4 AS-2/3); full parent run+steps snapshot before fork == after fork (US4 AS-4, SC-005)
+- [X] T043 [P] [US4] Unit tests in `tests/unit/test_canonical_json.py`: fixed vectors for canonical_json (key order, unicode, nesting) and sha256(name + canonical_json(args)) exact digests (research R3)
+- [X] T044 [P] [US4] Integration test in `tests/integration/test_interception_tiers.py`, driving `app/replay/interceptor.py` DIRECTLY against a seeded parent run's tool_call steps (not via the fork endpoint — Nestaro's single-shot forks emit no tool calls, research R4): (a) positional match by (run_id, seq) returns parent cached result; (b) seq mismatch but same name+args → hash fallback returns cached result; (c) unknown tool/args → typed mock {"result": {"mocked": true}, "error": null}; a sentinel real-tool spy proves zero real executions in all cases (US4 AS-1, constitution III)
+- [X] T045 [P] [US4] Integration test in `tests/integration/test_fork_safety.py`: forked llm_call.input records temperature 0 by default and the override value when given (US4 AS-2/3); full parent run+steps snapshot before fork == after fork (US4 AS-4, SC-005)
 
 ### Implementation for User Story 4
 
-- [ ] T046 [US4] Harden `app/replay/interceptor.py` and `app/replay/engine.py` until T043–T045 pass without weakening tier order or immutability; document the no-real-tool invariant in module docstrings
+- [X] T046 [US4] Harden `app/replay/interceptor.py` and `app/replay/engine.py` until T043–T045 pass without weakening tier order or immutability; document the no-real-tool invariant in module docstrings
 
 **Checkpoint**: All four stories independently verified
 

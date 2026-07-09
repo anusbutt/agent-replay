@@ -318,3 +318,28 @@ cleanup for the first time this project.
 
 blocked: none — Phase 5 (US3) complete. Next: Phase 6 (US4 — fork safety
 proof via the interceptor, T043–T046) or Phase 7 (polish, T047–T050).
+
+## Session 2026-07-09 (cont'd) — Phase 6: US4 fork safety proof (T043–T046, all done)
+
+- T-43 done: tests/unit/test_canonical_json.py — fixed vectors (key order, unicode preserved unescaped, nested/list order, book_appointment example), sha256 digests hardcoded and verified byte-exact, key-order-independence and content-sensitivity assertions | blocked: none
+- T-44 done: tests/integration/test_interception_tiers.py — drives app/replay/interceptor.py DIRECTLY against real DB-persisted Step rows (not via /fork): positional match, hash fallback (incl. dict-key-reordering insensitivity), typed mock on unknown tool, (run_id,seq) scoping doesn't leak across runs, sentinel real-tool spy proves zero real executions across every tier (US4 AS-1) | blocked: none
+- T-45 done: tests/integration/test_fork_safety.py — dedicated US4 file (deliberately overlapping test_fork.py per research R4): temperature 0 default, override honored across multiple values, parent run+steps byte-for-byte unchanged across 3 repeated forks off the same parent, fork never produces a tool_call step | blocked: none
+- T-46 done: app/replay/interceptor.py + engine.py needed ZERO code changes — 18/18 new US4 tests passed against the Phase 3 (T024/T025) implementation on the first run; the no-real-tool invariant was already documented in both module docstrings from Phase 3
+
+Third phase in a row (after Phase 5's T042) where the "harden until tests
+pass" task required no implementation changes — Phase 3's interceptor/engine
+were built correctly the first time against the constitution's exact tier
+order and immutability requirements.
+
+48/48 tests pass (30 prior + 18 new), host AND in-container (re-verified
+new test files actually landed in the rebuilt image this time, after
+Phase 5's stale-cache lesson — `docker compose exec backend ls` on all
+three new files before trusting the container pytest run). Demo db
+confirmed still exactly 5 legitimate rows after both host and in-container
+runs — the Phase 5 test-isolation fix is holding with zero manual cleanup
+needed for the first time across a full phase.
+
+blocked: none — Phase 6 (US4) complete. All four user stories (US1-US4)
+now done. Remaining: Phase 7 — Polish & Cross-Cutting Concerns (T047-T050):
+ROADMAP.md, README.md, clean-checkout SC-008 validation, final constitution
+sweep.
