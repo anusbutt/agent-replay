@@ -1,8 +1,15 @@
-"""Seed the Nestaro Friday/Saturday demo run into the ingest API.
+"""Seed demo runs into the ingest API for US1 (the primary scenario) and US3
+(sweep selectivity across a realistic mix of run states).
 
-POSTs a completed, data-contract-conformant run in which the customer asks for
-FRIDAY and the agent books SATURDAY — the primary acceptance scenario's input
-(spec US1). Payload shapes are byte-identical to docs/DATA_CONTRACT.md:
+POSTs three data-contract-conformant fixtures:
+1. The contradictory demo run — customer asks FRIDAY, agent books SATURDAY
+   (spec US1's primary acceptance scenario).
+2. A correct run — customer asks Friday, agent books Friday (no
+   contradiction) — proves the sweep leaves correct runs alone (US3 AS-2).
+3. A running run (status=running, no ended_at) — proves the sweep skips
+   in-flight runs without error (US3 edge case).
+
+Payload shapes are byte-identical to docs/DATA_CONTRACT.md:
 - messages recorded EXACTLY as sent, including the "Previous conversation:"
   history user message in position;
 - HTTP-Referer / X-Title headers recorded; NO Authorization key anywhere;
@@ -21,8 +28,10 @@ import httpx
 BASE_URL = os.environ.get("AGENTREPLAY_BASE_URL", "http://localhost:8000")
 API_KEY = os.environ.get("AGENTREPLAY_API_KEY", "dev-key")
 
-# Fixed UUID so re-seeding is idempotent (duplicate steps are rejected per-item).
+# Fixed UUIDs so re-seeding is idempotent (duplicate steps are rejected per-item).
 DEMO_RUN_ID = "11111111-1111-4111-8111-111111111111"
+CORRECT_RUN_ID = "44444444-4444-4444-8444-444444444444"
+RUNNING_RUN_ID = "55555555-5555-4555-8555-555555555555"
 
 SYSTEM_PROMPT = (
     "You are Nestaro, the friendly lead-qualification assistant for Breeze Home "
@@ -135,21 +144,129 @@ BATCH = {
 }
 
 
+FRIDAY_REPLY = (
+    "Great news — we can absolutely help with that! I've gone ahead and locked "
+    "in Friday at 10:00 AM for your duct cleaning, exactly as requested. See you "
+    "then!"
+)
+
+CORRECT_BATCH = {
+    "run": {
+        "id": CORRECT_RUN_ID,
+        "agent_id": "nestaro",
+        "session_id": "fbm-30912",
+        "status": "completed",
+        "run_metadata": {"channel": "facebook_messenger", "business_id": "biz_017"},
+        "started_at": "2026-07-07T11:00:00Z",
+        "ended_at": "2026-07-07T11:01:30Z",
+    },
+    "steps": [
+        {
+            "seq": 1,
+            "type": "state_change",
+            "input": {"from_state": "GREETING", "to_state": "QUOTING", "trigger": "service_identified"},
+            "output": {"from_state": "GREETING", "to_state": "QUOTING", "trigger": "service_identified"},
+            "latency_ms": 2,
+        },
+        {
+            "seq": 2,
+            "type": "llm_call",
+            "input": _llm_input(
+                [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": HISTORY_MESSAGE},
+                    {"role": "user", "content": "I need duct cleaning Friday"},
+                ]
+            ),
+            "output": _llm_output("gen-nstr-010", FRIDAY_REPLY, 498, 82),
+            "latency_ms": 1100,
+            "tokens_in": 498,
+            "tokens_out": 82,
+        },
+        {
+            "seq": 3,
+            "type": "state_change",
+            "input": {"from_state": "QUOTING", "to_state": "BOOKING", "trigger": "agent_selected_slot"},
+            "output": {"from_state": "QUOTING", "to_state": "BOOKING", "trigger": "agent_selected_slot"},
+            "latency_ms": 1,
+        },
+        {
+            "seq": 4,
+            "type": "tool_call",
+            "input": {
+                "name": "book_appointment",
+                "args": {"day": "friday", "time": "10:00", "customer_id": "cust_992"},
+            },
+            "output": {"result": {"booking_id": "bk_205", "confirmed": True}, "error": None},
+            "latency_ms": 165,
+        },
+    ],
+}
+
+# Still mid-conversation — no ended_at, no booking yet. The sweep must skip
+# this without error (US3 edge case, spec's "Run never ended" edge case).
+RUNNING_BATCH = {
+    "run": {
+        "id": RUNNING_RUN_ID,
+        "agent_id": "nestaro",
+        "session_id": "fbm-58213",
+        "status": "running",
+        "run_metadata": {"channel": "facebook_messenger", "business_id": "biz_017"},
+        "started_at": "2026-07-07T12:00:00Z",
+        "ended_at": None,
+    },
+    "steps": [
+        {
+            "seq": 1,
+            "type": "state_change",
+            "input": {"from_state": "GREETING", "to_state": "QUOTING", "trigger": "service_identified"},
+            "output": {"from_state": "GREETING", "to_state": "QUOTING", "trigger": "service_identified"},
+            "latency_ms": 2,
+        },
+        {
+            "seq": 2,
+            "type": "llm_call",
+            "input": _llm_input(
+                [
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": "Do you clean dryer vents too?"},
+                ]
+            ),
+            "output": _llm_output(
+                "gen-nstr-011",
+                "We sure do! Would you like a quote for that as well?",
+                120,
+                18,
+            ),
+            "latency_ms": 890,
+            "tokens_in": 120,
+            "tokens_out": 18,
+        },
+    ],
+}
+
+
 def main() -> int:
     auth = {"Authorization": f"Bearer {API_KEY}"}
     with httpx.Client(base_url=BASE_URL, headers=auth, timeout=30) as client:
-        resp = client.post("/ingest", json=BATCH)
-        resp.raise_for_status()
-        result = resp.json()
-        print(f"ingest: accepted={result['accepted']} rejected={len(result['rejected'])}")
+        for label, batch, run_id in (
+            ("contradictory", BATCH, DEMO_RUN_ID),
+            ("correct", CORRECT_BATCH, CORRECT_RUN_ID),
+            ("running", RUNNING_BATCH, RUNNING_RUN_ID),
+        ):
+            resp = client.post("/ingest", json=batch)
+            resp.raise_for_status()
+            result = resp.json()
+            print(f"ingest ({label}): accepted={result['accepted']} rejected={len(result['rejected'])}")
 
         listing = client.get("/runs", params={"agent_id": "nestaro"})
         listing.raise_for_status()
         ids = [r["id"] for r in listing.json()]
-        if DEMO_RUN_ID not in ids:
-            print("ERROR: seeded run not visible via GET /runs", file=sys.stderr)
+        missing = [rid for rid in (DEMO_RUN_ID, CORRECT_RUN_ID, RUNNING_RUN_ID) if rid not in ids]
+        if missing:
+            print(f"ERROR: seeded run(s) not visible via GET /runs: {missing}", file=sys.stderr)
             return 1
-        print(f"seeded demo run visible via GET /runs: {DEMO_RUN_ID}")
+        print(f"seeded demo runs visible via GET /runs: {DEMO_RUN_ID}, {CORRECT_RUN_ID}, {RUNNING_RUN_ID}")
         return 0
 
 
