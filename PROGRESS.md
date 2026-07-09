@@ -266,3 +266,55 @@ guarantee proven with a real backend outage, not just a mock.**
 
 blocked: none — Phase 4 (US2) complete. Next: Phase 5 (US3, detection at
 scale, T040–T042) or Phase 6 (US4, fork safety proof, T043–T046).
+
+## Session 2026-07-09 (cont'd) — Phase 5: US3 sweep at scale (T040–T042, all done)
+
+- T-40 done: tests/integration/test_sweep_selective.py — 4 tests: default sweep flags only contradictory + skips running/forked; explicit run_ids can target running/forked (openapi "OR the given run_ids" semantics); run_ids subset scopes correctly; one run's judge failure doesn't abort the sweep for others | blocked: none
+- T-41 done: scripts/seed_demo_run.py extended with CORRECT_RUN_ID (Friday asked, Friday booked — no contradiction) and RUNNING_RUN_ID (status=running, no ended_at, mid-conversation) fixtures, POSTed alongside the original contradictory demo run | blocked: none
+- T-42 done: app/routers/detection.py's candidate selection, per-run error isolation, and no-garbage guarantee were ALREADY correct from Phase 3 (T022) — T040's tests confirm this with zero detection.py code changes needed; only the query_judge retry (already added post-Phase-4 as a bugfix) benefits both endpoints | blocked: none
+
+**Real infrastructure fix (not a task, but required to get here)**: T040's
+"one run's judge failure doesn't abort the sweep" test exposed that
+tests/conftest.py shared the SAME Postgres database as the demo/T031/T039
+evidence — a recurring pollution problem flagged three times already this
+session, now escalated from cosmetic clutter into an actual test-correctness
+bug (a parameterless sweep picked up leftover runs from every prior pytest
+invocation this session, breaking a call-count assertion). Fixed properly:
+tests/conftest.py now forces pytest onto a separate `<dbname>_test` database
+(auto-created via a maintenance-db CREATE DATABASE, idempotent), truncated
+at the start of every test session — isolating tests from the demo dataset
+permanently, on both host venv AND in-container. Also found and fixed: the
+backend Dockerfile never COPYd sdk/ into the image, so the SDK unit/
+integration tests (Phase 4) had NEVER actually run in-container — fixed
+(`COPY sdk ./sdk`) and verified: 30/30 tests now pass identically on host
+and in-container. (Also had to `--no-cache` both rebuilds — Docker's build
+cache silently served stale layers again, third time this project has hit
+that exact failure mode with `--build` alone.)
+
+**Real-world verification** (not just tests — live seeded runs, real
+inference, same OpenRouter key as T031/T039): ran scripts/seed_demo_run.py
+against the live stack (idempotent re-seed of the contradictory run +
+fresh correct/running fixtures), then POST /detect/sweep with real Gemma-4:
+- correct run (44444444...) -> verdict "pass", stays completed
+- demo_agent's own real run (690be766..., from T039) -> verdict "pass",
+  stays completed (bonus cross-check — a real recorded run with no
+  contradiction correctly passes too)
+- contradictory run (11111111...) -> verdict "fail", flagged
+- running run (55555555...) -> absent from results entirely, untouched
+  (status still running, no detection key written)
+- fork run (b767d013...) -> absent from results entirely, untouched by
+  THIS sweep (a stray "detection: pass" key from an earlier manual
+  dashboard click — made before the fork-actions-hidden UX fix — was found
+  and cleaned up; not caused by current code)
+
+This is exactly US3's independent test scenario ("seed one contradictory +
+one correct + one running run; sweep; only the contradictory run is flagged
+with a verdict"), proven against the live containerized stack with real
+model inference, not stubs.
+
+30/30 tests pass (26 backend/SDK + 4 new sweep-selectivity), host AND
+in-container, confirmed stable across repeated invocations without manual
+cleanup for the first time this project.
+
+blocked: none — Phase 5 (US3) complete. Next: Phase 6 (US4 — fork safety
+proof via the interceptor, T043–T046) or Phase 7 (polish, T047–T050).

@@ -142,12 +142,12 @@ sweep; only the contradictory run is flagged with a verdict.
 
 ### Tests for User Story 3 (write first, must fail) ⚠️
 
-- [ ] T040 [P] [US3] Integration test in `tests/integration/test_sweep_selective.py`: sweep over {contradictory, correct, running, forked} seeds flags only the contradictory run (US3 AS-1/2); status=running and parent_run_id-set runs skipped without error; run_ids subset sweeps only listed runs; unparseable judge output → no verdict written, error reported
+- [X] T040 [P] [US3] Integration test in `tests/integration/test_sweep_selective.py`: sweep over {contradictory, correct, running, forked} seeds flags only the contradictory run (US3 AS-1/2); status=running and parent_run_id-set runs skipped without error; run_ids subset sweeps only listed runs; unparseable judge output → no verdict written, error reported
 
 ### Implementation for User Story 3
 
-- [ ] T041 [US3] Extend `scripts/seed_demo_run.py` with a correct run (customer asks Friday, agent books friday) and a status=running run fixture
-- [ ] T042 [US3] Harden sweep in `app/routers/detection.py`: candidate selection (all non-running, excluding forked runs with parent_run_id set, or explicit run_ids subset), per-run error isolation (one failure doesn't abort the sweep), no-garbage guarantee on parse failure; acceptance: T040 passes
+- [X] T041 [US3] Extend `scripts/seed_demo_run.py` with a correct run (customer asks Friday, agent books friday) and a status=running run fixture
+- [X] T042 [US3] Harden sweep in `app/routers/detection.py`: candidate selection (all non-running, excluding forked runs with parent_run_id set, or explicit run_ids subset), per-run error isolation (one failure doesn't abort the sweep), no-garbage guarantee on parse failure; acceptance: T040 passes
 
 **Checkpoint**: Detection is trustworthy across a pile of runs, not just the demo run
 
