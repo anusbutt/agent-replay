@@ -343,3 +343,68 @@ blocked: none — Phase 6 (US4) complete. All four user stories (US1-US4)
 now done. Remaining: Phase 7 — Polish & Cross-Cutting Concerns (T047-T050):
 ROADMAP.md, README.md, clean-checkout SC-008 validation, final constitution
 sweep.
+
+## Session 2026-07-09 (cont'd) — Phase 7: Polish & final constitution sweep (T047–T050, all done)
+
+- T-47 done: ROADMAP.md — all seven NOT-in-V1 scope-guard items documented with rationale + a "not yet promoted" section noting test-db isolation/CI and Alembic as future considerations | blocked: none
+- T-48 done: README.md — what AgentReplay is, architecture paragraph, quickstart link, full env var table (including the two dashboard-only build-time vars discovered during Phase 3's CORS/SSR debugging), stack summary | blocked: none
+- T-49 done: clean-checkout validation of SC-008 — full real-world test:
+  1. Fresh `git clone --branch 001-agentreplay-v1` into a scratch directory
+     (genuinely separate from the working tree — new git history checkout,
+     no reused node_modules/venv/images beyond Docker's normal layer cache).
+  2. Stopped the main stack (`docker compose down`, named volume preserved)
+     to free host ports 8000/3000/5432 for the clone's own stack.
+  3. `cp .env.example .env` + filled real values (same OpenRouter key as
+     T031/T039/T041, reused per maintainer's earlier decision) in the CLONE.
+  4. `docker compose up -d --build` from the clone — all three containers
+     (`clean-checkout-backend`, `clean-checkout-frontend`, `postgres:16`)
+     came up healthy on the first try.
+  5. Ran quickstart.md steps 2–6 against the clean stack, via
+     `docker compose exec backend python ...` (no host venv needed — the
+     container already has all deps, matching a genuine "just Docker"
+     clean-checkout experience): seed (3 fixtures, all freshly accepted) ->
+     detect (contradictory flagged, correct passed, running skipped) ->
+     analyze (failing_step=2, valid root cause + fix) -> fork (temperature
+     0, exactly 1 step, live reply flipped to Friday) -> compare (dashboard
+     HTTP 200, renders "parent-origin" + "Compare" + the flipped Friday
+     reply). SC-001 proven a second time, fully from scratch, with real
+     inference — not a rerun of the existing demo data.
+  6. `docker compose exec backend pytest` inside the clean-checkout
+     container: 48/48 passed.
+  7. Tore down the clone stack (`docker compose down -v` — disposable),
+     brought the main stack back up, confirmed healthy and demo evidence
+     (5 rows) untouched throughout.
+  SC-008 fully verified: a clean checkout really does work end-to-end with
+  nothing but `docker compose up` and a filled `.env` — no drift found, no
+  fixes needed.
+- T-50 done: final constitution sweep —
+  - Scope-guard grep (`otel|langchain|langgraph|rate.?limit|multi.?tenant`,
+    `websocket|server-sent|StreamingResponse`, `oauth|jwt|session.*cookie`)
+    across app/, sdk/, dashboard/src/: zero matches, confirmed clean.
+  - Auth: exactly one dependency (`require_api_key`) applied uniformly
+    across all 5 routers; no second auth mechanism anywhere.
+  - Pinned decisions verified directly in code:
+    1. Parent immutability — `app/replay/engine.py` has no `session.add(parent)`
+       or any write to `parent.status`/`parent.run_metadata`; only the new
+       fork run is ever persisted.
+    2. Interception order — `app/replay/interceptor.py` Tier 1 (positional)
+       -> Tier 2 (hash) -> Tier 3 (typed mock), exactly as pinned.
+    3. Temperature 0 default — `resolved_temperature = 0 if temperature is
+       None else temperature` in the engine, unconditionally applied.
+    4. Verdict keys — `run_metadata.detection`/`run_metadata.analysis` only,
+       via dict-merge (never replace); exactly two tables (`Run`, `Step`) in
+       `app/models.py`, no separate verdict table.
+    5. Ingest upsert protections — `_PROTECTED_METADATA_KEYS` guards
+       detection/analysis from being clobbered; flagged status never
+       downgraded by a later batch.
+  - pytest suite: 48/48 green, BOTH host venv and in-container (verified
+    fresh in this same session, not stale from an earlier phase).
+
+**All 50 tasks in tasks.md are now complete.** All four user stories
+(US1-US4) done, all seven phases done, SC-001 through SC-008 all verified
+against the live containerized stack with real inference at least once
+each. Constitution swept clean — no scope-guard violations, all five pinned
+decisions hold in the actual code, not just in documentation.
+
+blocked: none. AgentReplay V1 implementation is complete per
+specs/001-agentreplay-v1/tasks.md.

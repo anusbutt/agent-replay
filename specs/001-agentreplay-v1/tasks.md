@@ -185,10 +185,10 @@ executions everywhere.
 
 **Purpose**: Delivery hygiene + final constitutional verification
 
-- [ ] T047 [P] Create `ROADMAP.md` listing the seven NOT-in-V1 scope-guard items as roadmap entries (per docs/DECISIONS.md: "they go in ROADMAP.md, never in code")
-- [ ] T048 [P] Write `README.md`: what AgentReplay is, architecture paragraph, link to specs/001-agentreplay-v1/quickstart.md, env var table, hackathon context
-- [ ] T049 Clean-checkout validation of SC-008: fresh clone → `cp .env.example .env` + fill → `docker compose up` → full quickstart passes with three separate containers; fix any drift found (touching only non-test files)
-- [ ] T050 Final constitution sweep: verify no scope-guard item crept into code (grep for otel/langchain/rate-limit/streaming/multi-tenant), pinned decisions hold (parent immutability, interception order, temp 0, verdict keys), pytest suite green; record results in PROGRESS.md
+- [X] T047 [P] Create `ROADMAP.md` listing the seven NOT-in-V1 scope-guard items as roadmap entries (per docs/DECISIONS.md: "they go in ROADMAP.md, never in code")
+- [X] T048 [P] Write `README.md`: what AgentReplay is, architecture paragraph, link to specs/001-agentreplay-v1/quickstart.md, env var table, hackathon context
+- [X] T049 Clean-checkout validation of SC-008: fresh clone → `cp .env.example .env` + fill → `docker compose up` → full quickstart passes with three separate containers; fix any drift found (touching only non-test files)
+- [X] T050 Final constitution sweep: verify no scope-guard item crept into code (grep for otel/langchain/rate-limit/streaming/multi-tenant), pinned decisions hold (parent immutability, interception order, temp 0, verdict keys), pytest suite green; record results in PROGRESS.md
 
 ---
 
