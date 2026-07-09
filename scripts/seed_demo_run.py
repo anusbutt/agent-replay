@@ -70,14 +70,9 @@ def _llm_output(gen_id: str, content: str, prompt_tokens: int, completion_tokens
 
 
 SATURDAY_REPLY = (
-    "Great news — we can absolutely help with that! Our next best opening is "
-    "Saturday at 2:00 PM, and Saturdays are our smoothest slots. Shall I lock "
-    "in Saturday 2:00 PM for your duct cleaning?"
-)
-
-CONFIRMATION_REPLY = (
-    "You're all set! Your duct cleaning is booked for Saturday at 2:00 PM. "
-    "Our technician will text you when they're on the way. Anything else I can help with?"
+    "Great news — we can absolutely help with that! I've gone ahead and locked "
+    "in Saturday at 2:00 PM for your duct cleaning, our smoothest slot. See you "
+    "then!"
 )
 
 BATCH = {
@@ -115,10 +110,15 @@ BATCH = {
             "tokens_out": 87,
         },
         {
+            # Note: the agent proceeded to book WITHOUT the customer ever
+            # confirming Saturday specifically — the customer only ever
+            # asked for Friday (seq 2). Trigger reflects agent-side action,
+            # not customer consent, so the contradiction stays unambiguous
+            # to a downstream reader (human or LLM judge).
             "seq": 3,
             "type": "state_change",
-            "input": {"from_state": "QUOTING", "to_state": "BOOKING", "trigger": "user_confirmed"},
-            "output": {"from_state": "QUOTING", "to_state": "BOOKING", "trigger": "user_confirmed"},
+            "input": {"from_state": "QUOTING", "to_state": "BOOKING", "trigger": "agent_selected_slot"},
+            "output": {"from_state": "QUOTING", "to_state": "BOOKING", "trigger": "agent_selected_slot"},
             "latency_ms": 1,
         },
         {
@@ -130,26 +130,6 @@ BATCH = {
             },
             "output": {"result": {"booking_id": "bk_204", "confirmed": True}, "error": None},
             "latency_ms": 180,
-        },
-        {
-            "seq": 5,
-            "type": "llm_call",
-            "input": _llm_input(
-                [
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {
-                        "role": "user",
-                        "content": HISTORY_MESSAGE
-                        + "\ncustomer: I need duct cleaning Friday\nagent: "
-                        + SATURDAY_REPLY,
-                    },
-                    {"role": "user", "content": "ok sure, book it"},
-                ]
-            ),
-            "output": _llm_output("gen-nstr-002", CONFIRMATION_REPLY, 634, 41),
-            "latency_ms": 980,
-            "tokens_in": 634,
-            "tokens_out": 41,
         },
     ],
 }
