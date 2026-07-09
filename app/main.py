@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import init_db
 
@@ -31,6 +32,18 @@ def require_api_key(authorization: str | None = Header(default=None)) -> None:
 
 
 app = FastAPI(title="AgentReplay API", version="1.0.0", lifespan=lifespan)
+
+# The dashboard calls this API directly from the browser (client components:
+# detect sweep, analyze, fork buttons). Every route but /health already
+# requires the static API key, so CORS here only controls which origins may
+# READ responses — it is not an auth boundary, so a permissive origin policy
+# does not weaken FR-009's scope guard (single static key, nothing more).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health")
