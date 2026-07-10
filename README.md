@@ -19,18 +19,26 @@ resolves it, without ever touching the real booking system.
 
 ## AMD Compute Usage
 
-**Gemma 4 26B was loaded onto an AMD Radeon (gfx1100) GPU via ROCm
-(torch + ROCm) on the AMD compute pod provided by the hackathon, where it
-produced AgentReplay's root-cause analysis verdict.** The committed
-artifacts live in [`amd/`](amd/): the exact script that ran the inference
-(`run_gemma_analysis.py`), the real analysis prompt sent to the model, the
-verdict JSON Gemma 4 returned, and `rocm-smi` output captured **during**
-inference showing the gfx1100 device with VRAM occupied by the model.
+Analysis inference for the public hosted demo runs **Gemma 4 via
+OpenRouter** (provider-swappable through `ANALYSIS_BASE_URL` /
+`ANALYSIS_API_KEY` / `ANALYSIS_MODEL`).
 
-The public hosted demo serves analysis through OpenRouter (an
-OpenAI-compatible endpoint) for always-on availability; the AMD run in
-`amd/` demonstrates the same analysis pipeline executing on AMD hardware
-via ROCm.
+**AMD compute is demonstrated separately in [`amd/`](amd/):**
+AgentReplay's real root-cause analysis prompt — imported unmodified from
+[`app/analysis/prompts.py`](app/analysis/prompts.py) — was executed
+against a real recorded run on an **AMD Radeon gfx1100** (RDNA3, 48GB,
+ROCm 7.2) using **PyTorch built for ROCm** (`torch.version.hip`
+populated, `torch.version.cuda` `None`). The model loaded on the AMD GPU
+is **Qwen2.5-1.5B-Instruct** (see `MODEL_ID` in
+[`amd/run_analysis_on_amd.py`](amd/run_analysis_on_amd.py)); a smaller
+model was chosen because the hackathon pod's 24-hour window and download
+bandwidth made the 26B Gemma weights (~50GB) infeasible — the requirement
+is AMD compute usage, not model scale.
+
+The committed evidence in [`amd/`](amd/) includes the exact script, the
+exact prompt sent, the verdict the model produced, the ROCm/PyTorch
+environment fingerprint, and `rocm-smi` output captured while the model
+occupied VRAM on the gfx1100 device.
 
 ## Architecture
 

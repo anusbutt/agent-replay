@@ -136,8 +136,9 @@ in ROADMAP.md, never in code.
   shadcn/ui (vendored), framer-motion, and lucide-react;
   analysis inference via Gemma 4 on OpenRouter, provider-swappable through
   `ANALYSIS_BASE_URL`/`ANALYSIS_API_KEY`/`ANALYSIS_MODEL` env vars only
-  (AMD compute demonstration lives separately in `amd/` — Gemma 4 26B on an
-  AMD Radeon gfx1100 GPU via ROCm). No LangChain, no LangGraph, no
+  (AMD compute demonstration lives separately in `amd/` — the real analysis
+  prompt executed on an AMD Radeon gfx1100 GPU via ROCm/PyTorch, model per
+  `MODEL_ID` in `amd/run_analysis_on_amd.py`). No LangChain, no LangGraph, no
   ORMs other than SQLModel, no message queues.
 - One task from tasks.md per session; done = the task's acceptance criteria
   pass, verified by actually running them (pytest / curl / stated check).

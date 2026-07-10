@@ -1,3 +1,4 @@
-PLACEHOLDER — to be replaced by rocm-smi output captured while Gemma 4 26B
-inference was running on the AMD pod, showing the gfx1100 device and VRAM
-occupied by the loaded model.
+PLACEHOLDER — to be replaced by rocm-smi output captured by
+`python amd/run_analysis_on_amd.py` while the model was resident in VRAM on
+the AMD pod, showing the gfx1100 device with VRAM occupied, plus
+torch.cuda.memory_allocated().

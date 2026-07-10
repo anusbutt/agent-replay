@@ -1,25 +1,42 @@
-# AMD Compute — Gemma 4 on Radeon (gfx1100) via ROCm
+# AMD Compute — AgentReplay's analysis pipeline on Radeon gfx1100 via ROCm
 
-This directory is the committed evidence that AgentReplay's analysis
-pipeline ran on **AMD hardware**: **Gemma 4 26B** loaded onto an **AMD
-Radeon (gfx1100)** GPU through **ROCm** (torch + ROCm) on the AMD compute
-pod provided by the hackathon, producing the same root-cause analysis
-verdict the product stores at `run_metadata.analysis`.
+This directory is the committed evidence that AgentReplay's root-cause
+analysis ran on **AMD hardware**: the production analysis prompt, imported
+unmodified from [`app/analysis/prompts.py`](../app/analysis/prompts.py),
+executed against the real recorded Friday/Saturday misbooking run on an
+**AMD Radeon gfx1100** (RDNA3, 48GB VRAM) through **PyTorch built for
+ROCm** on the hackathon's AMD compute pod.
 
-## What lives here
+The model loaded on the AMD GPU is defined by `MODEL_ID` in
+[`run_analysis_on_amd.py`](run_analysis_on_amd.py) —
+**Qwen/Qwen2.5-1.5B-Instruct**. A smaller model was chosen because the
+pod's 24-hour window and download bandwidth made the ~50GB Gemma 4 26B
+weights infeasible; the requirement being demonstrated is AMD compute
+usage, not model scale. The public hosted demo serves the same analysis
+pipeline through Gemma 4 on OpenRouter (see the
+[root README](../README.md#amd-compute-usage)).
 
-| File | What it is |
-|---|---|
-| [`run_gemma_analysis.py`](run_gemma_analysis.py) | The script executed on the AMD pod: loads Gemma 4 26B via torch/ROCm on the gfx1100 device, feeds it the serialized failing run, prints the verdict JSON |
-| [`analysis_prompt.txt`](analysis_prompt.txt) | The real analysis prompt sent to the model — the serialized Nestaro Friday/Saturday run plus AgentReplay's root-cause instruction (same prompt builder as `app/analysis/prompts.py`) |
-| [`gemma4_verdict_on_amd.json`](gemma4_verdict_on_amd.json) | The verdict Gemma 4 produced on the AMD GPU: `failing_step`, `root_cause`, `suggested_fix` — matching the schema stored at `run_metadata.analysis` |
-| [`rocm_smi_during_inference.txt`](rocm_smi_during_inference.txt) | `rocm-smi` output captured **while inference was running**: shows the gfx1100 device with VRAM occupied by the loaded model |
+## How to reproduce
 
-## How this relates to the hosted demo
+On a machine with an AMD GPU, ROCm, and a ROCm build of PyTorch
+(plus `transformers`), from the repo root:
 
-The public demo (Vercel dashboard + Railway backend) serves analysis
-through OpenRouter for always-on availability — an OpenAI-compatible
-endpoint selected by `ANALYSIS_BASE_URL`/`ANALYSIS_API_KEY`/
-`ANALYSIS_MODEL` env vars. The run documented here executed the same
-analysis (same prompt shape, same verdict schema) directly on AMD silicon
-via ROCm.
+```bash
+python amd/run_analysis_on_amd.py
+```
+
+The script refuses to run on a CUDA build (`torch.version.hip` must be
+populated and `torch.version.cuda` must be `None`), loads the model in
+float16 onto the GPU, runs greedy decoding, captures `rocm-smi` **while
+the model is resident in VRAM**, and overwrites the five artifacts below.
+
+## The artifacts
+
+| File | What it is | What it proves |
+|---|---|---|
+| [`run_analysis_on_amd.py`](run_analysis_on_amd.py) | The exact script executed on the AMD pod. Imports `build_analysis_messages` + `extract_json_object` unmodified from `app/analysis/prompts.py`; loads the Friday/Saturday fixture from `scripts/seed_demo_run.py::BATCH`; hard-asserts a ROCm torch build | The evidence is reproducible and uses AgentReplay's real production prompt and real recorded data — not a synthetic hello-world |
+| [`environment.txt`](environment.txt) | `torch.__version__`, `torch.version.hip`, `torch.version.cuda` (None), `gcnArchName`, total VRAM, `MODEL_ID`, captured at run time | The PyTorch stack was a ROCm build talking to a gfx1100 device — not CUDA, not CPU |
+| [`prompt.txt`](prompt.txt) | The exact prompt string sent to the model: the analysis system prompt from `app/analysis/prompts.py` + the serialized fixture transcript, rendered through the model's chat template | What ran on AMD is the same root-cause prompt the hosted product sends to its judge |
+| [`verdict.json`](verdict.json) | Machine-readable result: `model_id`, `hardware`, `rocm_version`, `fixture`, `timestamp_utc`, verbatim `raw_output`, and `parsed` (the `{failing_step, root_cause, suggested_fix}` schema used at `run_metadata.analysis`, or null if the model's JSON didn't validate) | The AMD run produced a real verdict in the product's own schema, with full provenance |
+| [`verdict.md`](verdict.md) | The same verdict, human-readable, with a hardware/model/fixture header | A judge can read the outcome without parsing JSON |
+| [`rocm_smi_during_inference.txt`](rocm_smi_during_inference.txt) | `rocm-smi` (plus `--showmeminfo vram`) captured after generation while the model was still resident, plus `torch.cuda.memory_allocated()` | The gfx1100 device actually held the model in VRAM — the card wasn't idle |
