@@ -15,13 +15,13 @@ implementation-level unknowns the settled docs intentionally leave open.
 - **Decision**: SDK: Python 3.11+ + httpx. Backend: FastAPI + SQLModel.
   DB: NeonDB Postgres (fixed columns + JSONB payloads). Dashboard: Next.js +
   TypeScript + Tailwind, shadcn/ui (vendored), framer-motion, lucide-react.
-  Analysis: Gemma 4 via OpenRouter,
-  OpenAI-compatible (AMD-hardware-hosted inference via Fireworks AI is the
-  intended production target once deployed); provider swap via
-  `ANALYSIS_BASE_URL` only.
-- **Rationale**: Pinned in CLAUDE.md ("Stack (do not substitute)"); hackathon
-  requires AMD-hosted inference; OpenAI-compatible endpoint makes any
-  provider swap a config change, not a code change.
+  Analysis: Gemma 4 via OpenRouter, OpenAI-compatible; provider swap via
+  `ANALYSIS_BASE_URL`/`ANALYSIS_API_KEY`/`ANALYSIS_MODEL` only. The
+  hackathon's AMD-compute requirement is demonstrated separately (Gemma 4
+  26B on an AMD Radeon gfx1100 GPU via ROCm — artifacts in `amd/`).
+- **Rationale**: Pinned in CLAUDE.md ("Stack (do not substitute)");
+  OpenAI-compatible endpoint makes any provider swap a config change, not a
+  code change.
 - **Alternatives considered**: Closed upstream — LangChain/LangGraph, other
   ORMs, and message queues are explicitly forbidden.
 
@@ -161,8 +161,8 @@ implementation-level unknowns the settled docs intentionally leave open.
 - **Alternatives considered**: Rule/regex detection (cannot generalize past
   the demo case; brittle even for it); embedding similarity (adds a model +
   threshold tuning for weaker explanations); vLLM guided/structured decoding
-  (nice-to-have; prompt-level JSON + defensive parse is portable across the
-  Fireworks fallback).
+  (nice-to-have; prompt-level JSON + defensive parse is portable across
+  OpenAI-compatible providers).
 
 ### R6. Fork live-inference endpoint
 

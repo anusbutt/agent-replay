@@ -231,8 +231,10 @@ agent for home service businesses.
 - Dashboard: Next.js + TypeScript on Vercel. Tailwind + shadcn/ui (vendored
   in components/ui) + framer-motion + lucide-react; nothing heavier
 - Analysis inference: Gemma 4 via OpenRouter, OpenAI-compatible endpoint.
-  AMD-hardware-hosted inference via Fireworks AI is the intended production
-  target once deployed there. Switch = ANALYSIS_BASE_URL env var only
+  Provider swap = ANALYSIS_BASE_URL/ANALYSIS_API_KEY/ANALYSIS_MODEL env vars
+  only. AMD compute demonstration (hackathon requirement): Gemma 4 26B
+  executed on an AMD Radeon (gfx1100) GPU via ROCm on the hackathon's AMD
+  compute pod — artifacts committed under amd/
 - No LangChain, no LangGraph, no ORMs other than SQLModel, no message queues
 
 ## Architecture in one paragraph

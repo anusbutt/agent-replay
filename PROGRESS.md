@@ -147,10 +147,10 @@ phase, none in pre-existing tests):
    (11111111-1111-4111-8111-111111111111) so the dashboard/T031 demo isn't
    cluttered.
 
-T-031 NOT done: requires real ANALYSIS_BASE_URL/ANALYSIS_API_KEY (Gemma on
-AMD MI300X vLLM or Fireworks fallback) and REPLAY_BASE_URL/REPLAY_API_KEY
-(OpenRouter) — maintainer confirmed these aren't ready yet; deferred by
-maintainer decision, to be run once credentials are available.
+T-031 NOT done: requires real ANALYSIS_BASE_URL/ANALYSIS_API_KEY (a hosted
+Gemma endpoint) and REPLAY_BASE_URL/REPLAY_API_KEY (OpenRouter) —
+maintainer confirmed these aren't ready yet; deferred by maintainer
+decision, to be run once credentials are available.
 
 blocked: T-031 blocked on real ANALYSIS_BASE_URL/REPLAY_BASE_URL credentials
 
@@ -160,7 +160,7 @@ Ran quickstart.md steps 1–6 against the live containerized compose stack
 (backend/frontend/db all `docker compose ps` = running) with REAL inference:
 ANALYSIS_BASE_URL=REPLAY_BASE_URL=https://openrouter.ai/api/v1 (maintainer's
 OpenRouter key, confirmed via AskUserQuestion to reuse for both analysis and
-fork since no separate Gemma/MI300X or Fireworks endpoint was available).
+fork since no separate hosted Gemma endpoint was available).
 Analysis model bumped from a guessed `google/gemma-3-27b-it` to the verified-
 available `google/gemma-4-31b-it` (queried OpenRouter's live /models catalog
 — exact "Gemma 4" match per spec). Fork calls reuse the recorded model id

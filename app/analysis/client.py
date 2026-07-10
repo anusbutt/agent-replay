@@ -1,7 +1,8 @@
 """OpenAI-compatible chat client for the analysis/detection judge (research R5).
 
-Reads ANALYSIS_BASE_URL / ANALYSIS_API_KEY. Switching to the Fireworks
-fallback is an env-var swap only — no code change (constitution: fixed stack).
+Reads ANALYSIS_BASE_URL / ANALYSIS_API_KEY / ANALYSIS_MODEL. Switching to any
+OpenAI-compatible provider is an env-var swap only — no code change
+(constitution: fixed stack).
 """
 
 import os
@@ -45,8 +46,7 @@ def query_judge(messages: list[dict], verdict_cls: type[T], *, max_attempts: int
 def chat_completion(messages: list[dict], *, model: str | None = None) -> str:
     """POST /chat/completions to ANALYSIS_BASE_URL; returns the assistant content string.
 
-    Model id is provider-specific (OpenRouter: google/gemma-4-31b-it;
-    Fireworks: accounts/fireworks/models/...), so ANALYSIS_MODEL rides along
+    Model id formats are provider-specific, so ANALYSIS_MODEL rides along
     with ANALYSIS_BASE_URL/ANALYSIS_API_KEY as the provider-swap trio.
     """
     if model is None:

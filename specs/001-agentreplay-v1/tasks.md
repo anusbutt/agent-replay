@@ -84,7 +84,7 @@ the seeded fixture (no SDK needed — spec assumption allows seeded runs).
 
 ### Implementation for User Story 1
 
-- [X] T019 [P] [US1] Create OpenAI-compatible chat client in `app/analysis/client.py` reading ANALYSIS_BASE_URL/ANALYSIS_API_KEY (research R5; Fireworks fallback = env swap only)
+- [X] T019 [P] [US1] Create OpenAI-compatible chat client in `app/analysis/client.py` reading ANALYSIS_BASE_URL/ANALYSIS_API_KEY (research R5; provider swap = env vars only)
 - [X] T020 [P] [US1] Create run serializer in `app/analysis/serializer.py`: steps → compact transcript (system prompt, messages, tool calls with args/results, state changes) for judge prompts
 - [X] T021 [P] [US1] Create strict-JSON prompt templates in `app/analysis/prompts.py`: detection verdict {verdict, reason, contradiction} and analysis verdict {failing_step, root_cause, suggested_fix} with defensive JSON extraction helper (research R5)
 - [X] T022 [US1] Implement `POST /detect/sweep` in `app/routers/detection.py`: evaluate candidate runs (skip status=running), merge verdict into run_metadata.detection, set status=flagged on fail; acceptance: T016 passes

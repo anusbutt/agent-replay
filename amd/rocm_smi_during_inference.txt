@@ -1,0 +1,3 @@
+PLACEHOLDER — to be replaced by rocm-smi output captured while Gemma 4 26B
+inference was running on the AMD pod, showing the gfx1100 device and VRAM
+occupied by the loaded model.

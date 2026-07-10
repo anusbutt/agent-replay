@@ -12,7 +12,7 @@ cp .env.example .env
 # fill in:
 # DATABASE_URL          — set automatically for compose; NeonDB URL for hosted
 # AGENTREPLAY_API_KEY   — the single static API key
-# ANALYSIS_BASE_URL     — Gemma 4 endpoint via OpenRouter (Fireworks/AMD-hosted target once deployed)
+# ANALYSIS_BASE_URL     — Gemma 4 endpoint via OpenRouter (any OpenAI-compatible provider works)
 # ANALYSIS_API_KEY      — key for the analysis endpoint
 # REPLAY_BASE_URL       — OpenAI-compatible endpoint for forked LLM calls (default OpenRouter)
 # REPLAY_API_KEY        — key for the replay endpoint
@@ -117,5 +117,5 @@ docker compose exec backend pytest          # backend + contract tests
 
 - backend: Railway deploys the root `Dockerfile`; `DATABASE_URL` → NeonDB.
 - frontend: Vercel builds `dashboard/` (container remains for local/demo).
-- Switching analysis to the Fireworks fallback = change `ANALYSIS_BASE_URL`
-  (and key); nothing else.
+- Switching analysis to another OpenAI-compatible provider = change
+  `ANALYSIS_BASE_URL` (plus key and `ANALYSIS_MODEL`); nothing else.

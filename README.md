@@ -17,6 +17,21 @@ appointment, Nestaro books Saturday instead — AgentReplay detects the
 contradiction, explains why it happened, and proves a one-line prompt fix
 resolves it, without ever touching the real booking system.
 
+## AMD Compute Usage
+
+**Gemma 4 26B was loaded onto an AMD Radeon (gfx1100) GPU via ROCm
+(torch + ROCm) on the AMD compute pod provided by the hackathon, where it
+produced AgentReplay's root-cause analysis verdict.** The committed
+artifacts live in [`amd/`](amd/): the exact script that ran the inference
+(`run_gemma_analysis.py`), the real analysis prompt sent to the model, the
+verdict JSON Gemma 4 returned, and `rocm-smi` output captured **during**
+inference showing the gfx1100 device with VRAM occupied by the model.
+
+The public hosted demo serves analysis through OpenRouter (an
+OpenAI-compatible endpoint) for always-on availability; the AMD run in
+`amd/` demonstrates the same analysis pipeline executing on AMD hardware
+via ROCm.
+
 ## Architecture
 
 Agent code wraps its LLM client with `replay.wrap(client)` and decorates
@@ -30,10 +45,10 @@ call at the chosen step, at temperature 0, with the fix applied. A tool
 interceptor guarantees a forked run never executes a real tool, matching a
 cached result positionally or by content hash before falling back to a
 typed mock. An analysis layer sends serialized runs to an LLM judge (Gemma
-4 via OpenRouter, an OpenAI-compatible endpoint — AMD-hardware-hosted
-inference via Fireworks AI is the intended production target once deployed
-there) for detection and root-cause verdicts, stored as JSONB on the
-run's own metadata.
+4 via OpenRouter, an OpenAI-compatible endpoint, provider-swappable via
+env vars) for detection and root-cause verdicts, stored as JSONB on the
+run's own metadata. The same analysis pipeline has been executed on AMD
+hardware — see [AMD Compute Usage](#amd-compute-usage).
 
 ## Getting started
 
@@ -60,8 +75,9 @@ container-specific code paths (constitution Principle VII).
 |---|---|---|
 | `DATABASE_URL` | Postgres connection string | set by `compose.yml` for the local stack; NeonDB URL for hosted |
 | `AGENTREPLAY_API_KEY` | The single static API key protecting every backend endpoint | none — must be set |
-| `ANALYSIS_BASE_URL` | OpenAI-compatible endpoint for detection/analysis (Gemma 4 via OpenRouter; AMD-hardware-hosted via Fireworks AI is the intended production target once deployed; swap providers by changing this URL only) | `https://openrouter.ai/api/v1` |
+| `ANALYSIS_BASE_URL` | OpenAI-compatible endpoint for detection/analysis (Gemma 4 via OpenRouter; swap providers by changing this URL, the key, and `ANALYSIS_MODEL`) | `https://openrouter.ai/api/v1` |
 | `ANALYSIS_API_KEY` | Key for the analysis endpoint | none — must be set |
+| `ANALYSIS_MODEL` | Model id for the analysis endpoint (format is provider-specific) | `google/gemma-4-31b-it` |
 | `REPLAY_BASE_URL` | OpenAI-compatible endpoint for forked LLM calls | `https://openrouter.ai/api/v1` |
 | `REPLAY_API_KEY` | Key for the replay/fork endpoint | none — must be set |
 

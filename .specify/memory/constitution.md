@@ -134,9 +134,10 @@ in ROADMAP.md, never in code.
   SQLModel backend; NeonDB (Postgres) with fixed columns for structure and
   JSONB for payloads; Next.js + TypeScript dashboard with Tailwind,
   shadcn/ui (vendored), framer-motion, and lucide-react;
-  analysis inference via Gemma 4 on OpenRouter (AMD-hardware-hosted
-  inference via Fireworks AI is the intended production target once
-  deployed), switched by `ANALYSIS_BASE_URL` env var only. No LangChain, no LangGraph, no
+  analysis inference via Gemma 4 on OpenRouter, provider-swappable through
+  `ANALYSIS_BASE_URL`/`ANALYSIS_API_KEY`/`ANALYSIS_MODEL` env vars only
+  (AMD compute demonstration lives separately in `amd/` — Gemma 4 26B on an
+  AMD Radeon gfx1100 GPU via ROCm). No LangChain, no LangGraph, no
   ORMs other than SQLModel, no message queues.
 - One task from tasks.md per session; done = the task's acceptance criteria
   pass, verified by actually running them (pytest / curl / stated check).
