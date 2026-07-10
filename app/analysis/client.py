@@ -42,8 +42,15 @@ def query_judge(messages: list[dict], verdict_cls: type[T], *, max_attempts: int
     raise last_exc
 
 
-def chat_completion(messages: list[dict], *, model: str = "google/gemma-4-31b-it") -> str:
-    """POST /chat/completions to ANALYSIS_BASE_URL; returns the assistant content string."""
+def chat_completion(messages: list[dict], *, model: str | None = None) -> str:
+    """POST /chat/completions to ANALYSIS_BASE_URL; returns the assistant content string.
+
+    Model id is provider-specific (OpenRouter: google/gemma-4-31b-it;
+    Fireworks: accounts/fireworks/models/...), so ANALYSIS_MODEL rides along
+    with ANALYSIS_BASE_URL/ANALYSIS_API_KEY as the provider-swap trio.
+    """
+    if model is None:
+        model = os.environ.get("ANALYSIS_MODEL", "google/gemma-4-31b-it").strip()
     # .strip() guards against trailing newlines pasted into hosted env-var
     # editors — a stray \n makes the Authorization header illegal.
     base_url = os.environ["ANALYSIS_BASE_URL"].strip().rstrip("/")
