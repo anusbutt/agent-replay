@@ -19,26 +19,24 @@ resolves it, without ever touching the real booking system.
 
 ## AMD Compute Usage
 
-Analysis inference for the public hosted demo runs **Gemma 4 via
-OpenRouter** (provider-swappable through `ANALYSIS_BASE_URL` /
-`ANALYSIS_API_KEY` / `ANALYSIS_MODEL`).
+**AgentReplay's ROCm/PyTorch stack was brought up on an AMD Radeon gfx1100
+(RDNA3, 48GB) on the AMD Developer Cloud hackathon pod.**
+`torch.version.hip` is populated and `torch.version.cuda` is `None` — a
+**ROCm** build of **PyTorch**, not CUDA — and **GPU compute was executed
+and verified** on the AMD device (4096x4096 matmul; captured output,
+environment fingerprint, and `rocm-smi` in [`amd/`](amd/)).
 
-**AMD compute is demonstrated separately in [`amd/`](amd/):**
-AgentReplay's real root-cause analysis prompt — imported unmodified from
-[`app/analysis/prompts.py`](app/analysis/prompts.py) — was executed
-against a real recorded run on an **AMD Radeon gfx1100** (RDNA3, 48GB,
-ROCm 7.2) using **PyTorch built for ROCm** (`torch.version.hip`
-populated, `torch.version.cuda` `None`). The model loaded on the AMD GPU
-is **Qwen2.5-1.5B-Instruct** (see `MODEL_ID` in
-[`amd/run_analysis_on_amd.py`](amd/run_analysis_on_amd.py)); a smaller
-model was chosen because the hackathon pod's 24-hour window and download
-bandwidth made the 26B Gemma weights (~50GB) infeasible — the requirement
-is AMD compute usage, not model scale.
+An on-pod run of the full analysis prompt was prepared
+([`amd/run_analysis_on_amd.py`](amd/run_analysis_on_amd.py) — it imports
+AgentReplay's real root-cause prompt unmodified from
+[`app/analysis/prompts.py`](app/analysis/prompts.py)), but the pod's
+gateway became unavailable before it executed; the script is committed and
+reproducible on any ROCm machine.
 
-The committed evidence in [`amd/`](amd/) includes the exact script, the
-exact prompt sent, the verdict the model produced, the ROCm/PyTorch
-environment fingerprint, and `rocm-smi` output captured while the model
-occupied VRAM on the gfx1100 device.
+Analysis inference for the public hosted demo runs Gemma 4 via OpenRouter,
+provider-swappable through `ANALYSIS_BASE_URL` / `ANALYSIS_API_KEY` /
+`ANALYSIS_MODEL`. The hosted demo does not run on AMD; [`amd/`](amd/) is
+what ran on AMD.
 
 ## Architecture
 
@@ -55,8 +53,8 @@ cached result positionally or by content hash before falling back to a
 typed mock. An analysis layer sends serialized runs to an LLM judge (Gemma
 4 via OpenRouter, an OpenAI-compatible endpoint, provider-swappable via
 env vars) for detection and root-cause verdicts, stored as JSONB on the
-run's own metadata. The same analysis pipeline has been executed on AMD
-hardware — see [AMD Compute Usage](#amd-compute-usage).
+run's own metadata. AMD compute evidence for the hackathon lives in
+[`amd/`](amd/) — see [AMD Compute Usage](#amd-compute-usage).
 
 ## Getting started
 

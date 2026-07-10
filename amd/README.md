@@ -1,42 +1,28 @@
-# AMD Compute — AgentReplay's analysis pipeline on Radeon gfx1100 via ROCm
+# AMD Compute — AgentReplay on Radeon gfx1100 (RDNA3) via ROCm
 
-This directory is the committed evidence that AgentReplay's root-cause
-analysis ran on **AMD hardware**: the production analysis prompt, imported
-unmodified from [`app/analysis/prompts.py`](../app/analysis/prompts.py),
-executed against the real recorded Friday/Saturday misbooking run on an
-**AMD Radeon gfx1100** (RDNA3, 48GB VRAM) through **PyTorch built for
-ROCm** on the hackathon's AMD compute pod.
+AgentReplay's ROCm/PyTorch stack was brought up on an **AMD Radeon gfx1100**
+(RDNA3, 48GB) on the **AMD Developer Cloud hackathon pod**.
+`torch.version.hip` is populated and `torch.version.cuda` is `None`: this is
+a **ROCm** build of **PyTorch**, not CUDA. **GPU compute was executed and
+verified** (a 4096x4096 matmul on the AMD device — see the captured output
+below).
 
-The model loaded on the AMD GPU is defined by `MODEL_ID` in
-[`run_analysis_on_amd.py`](run_analysis_on_amd.py) —
-**Qwen/Qwen2.5-1.5B-Instruct**. A smaller model was chosen because the
-pod's 24-hour window and download bandwidth made the ~50GB Gemma 4 26B
-weights infeasible; the requirement being demonstrated is AMD compute
-usage, not model scale. The public hosted demo serves the same analysis
-pipeline through Gemma 4 on OpenRouter (see the
-[root README](../README.md#amd-compute-usage)).
+An on-pod run of the full analysis prompt was prepared
+([`run_analysis_on_amd.py`](run_analysis_on_amd.py)) but the pod's gateway
+became unavailable before it executed; the script is committed and
+reproducible on any ROCm machine.
 
-## How to reproduce
+The public hosted demo serves root-cause analysis via OpenRouter, which is
+provider-swappable through `ANALYSIS_BASE_URL` / `ANALYSIS_API_KEY` /
+`ANALYSIS_MODEL`. The hosted demo does not run on AMD; the evidence in this
+directory is what ran on AMD.
 
-On a machine with an AMD GPU, ROCm, and a ROCm build of PyTorch
-(plus `transformers`), from the repo root:
+## The files
 
-```bash
-python amd/run_analysis_on_amd.py
-```
-
-The script refuses to run on a CUDA build (`torch.version.hip` must be
-populated and `torch.version.cuda` must be `None`), loads the model in
-float16 onto the GPU, runs greedy decoding, captures `rocm-smi` **while
-the model is resident in VRAM**, and overwrites the five artifacts below.
-
-## The artifacts
-
-| File | What it is | What it proves |
-|---|---|---|
-| [`run_analysis_on_amd.py`](run_analysis_on_amd.py) | The exact script executed on the AMD pod. Imports `build_analysis_messages` + `extract_json_object` unmodified from `app/analysis/prompts.py`; loads the Friday/Saturday fixture from `scripts/seed_demo_run.py::BATCH`; hard-asserts a ROCm torch build | The evidence is reproducible and uses AgentReplay's real production prompt and real recorded data — not a synthetic hello-world |
-| [`environment.txt`](environment.txt) | `torch.__version__`, `torch.version.hip`, `torch.version.cuda` (None), `gcnArchName`, total VRAM, `MODEL_ID`, captured at run time | The PyTorch stack was a ROCm build talking to a gfx1100 device — not CUDA, not CPU |
-| [`prompt.txt`](prompt.txt) | The exact prompt string sent to the model: the analysis system prompt from `app/analysis/prompts.py` + the serialized fixture transcript, rendered through the model's chat template | What ran on AMD is the same root-cause prompt the hosted product sends to its judge |
-| [`verdict.json`](verdict.json) | Machine-readable result: `model_id`, `hardware`, `rocm_version`, `fixture`, `timestamp_utc`, verbatim `raw_output`, and `parsed` (the `{failing_step, root_cause, suggested_fix}` schema used at `run_metadata.analysis`, or null if the model's JSON didn't validate) | The AMD run produced a real verdict in the product's own schema, with full provenance |
-| [`verdict.md`](verdict.md) | The same verdict, human-readable, with a hardware/model/fixture header | A judge can read the outcome without parsing JSON |
-| [`rocm_smi_during_inference.txt`](rocm_smi_during_inference.txt) | `rocm-smi` (plus `--showmeminfo vram`) captured after generation while the model was still resident, plus `torch.cuda.memory_allocated()` | The gfx1100 device actually held the model in VRAM — the card wasn't idle |
+| File | What it is | What it proves | How to reproduce |
+|---|---|---|---|
+| [`environment.txt`](environment.txt) | Environment fingerprint captured on the pod: torch 2.9.1 ROCm build (`torch.version.hip` = 7.2.53211, `torch.version.cuda` = None), gfx1100, 51.5 GB VRAM | The PyTorch stack talking to the GPU was a ROCm build on a gfx1100 device | Print `torch.__version__`, `torch.version.hip`, `torch.version.cuda`, `torch.cuda.get_device_properties(0)` on any ROCm machine |
+| [`rocm_smi.txt`](rocm_smi.txt) | `rocm-smi` capture from the pod (taken before model load — GPU idle): device 0x744b, 241W power cap | The physical AMD device present on the pod, as reported by ROCm's own tooling | Run `rocm-smi` on the pod |
+| [`gpu_compute_check.py`](gpu_compute_check.py) | Script that asserts a ROCm (non-CUDA) torch build, prints device identity, and executes a 4096x4096 matmul on the AMD device | Real GPU compute ran through ROCm — not just an environment listing | `python amd/gpu_compute_check.py` on any ROCm machine |
+| [`gpu_compute_check_output.txt`](gpu_compute_check_output.txt) | Captured output of that script on the pod: gfx1100, matmul result, VRAM allocated. `get_device_name()` returns empty on this RDNA3 card — `gcnArchName` is the authoritative identifier | The compute check succeeded on the AMD GPU | Same command; the matmul sum is seed/platform-dependent |
+| [`run_analysis_on_amd.py`](run_analysis_on_amd.py) | The prepared full-pipeline run: imports AgentReplay's real analysis prompt unmodified from `app/analysis/prompts.py`, loads the real Friday/Saturday fixture, hard-asserts a ROCm build, and writes verdict + VRAM-capture artifacts. Not executed — the pod's gateway went down first | The intended end-to-end demonstration is committed, auditable, and runnable by anyone with a ROCm machine | `python amd/run_analysis_on_amd.py` from the repo root (torch ROCm build + transformers) |

@@ -17,9 +17,9 @@ implementation-level unknowns the settled docs intentionally leave open.
   TypeScript + Tailwind, shadcn/ui (vendored), framer-motion, lucide-react.
   Analysis: Gemma 4 via OpenRouter, OpenAI-compatible; provider swap via
   `ANALYSIS_BASE_URL`/`ANALYSIS_API_KEY`/`ANALYSIS_MODEL` only. The
-  hackathon's AMD-compute requirement is demonstrated separately (the real
-  analysis prompt executed on an AMD Radeon gfx1100 GPU via ROCm/PyTorch —
-  artifacts in `amd/`).
+  hackathon's AMD-compute requirement is demonstrated separately
+  (ROCm/PyTorch on an AMD Radeon gfx1100 with verified GPU compute —
+  evidence in `amd/`).
 - **Rationale**: Pinned in CLAUDE.md ("Stack (do not substitute)");
   OpenAI-compatible endpoint makes any provider swap a config change, not a
   code change.

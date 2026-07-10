@@ -232,10 +232,11 @@ agent for home service businesses.
   in components/ui) + framer-motion + lucide-react; nothing heavier
 - Analysis inference: Gemma 4 via OpenRouter, OpenAI-compatible endpoint.
   Provider swap = ANALYSIS_BASE_URL/ANALYSIS_API_KEY/ANALYSIS_MODEL env vars
-  only. AMD compute demonstration (hackathon requirement): the real analysis
-  prompt from app/analysis/prompts.py executed on an AMD Radeon gfx1100 GPU
-  via ROCm/PyTorch (model = MODEL_ID in amd/run_analysis_on_amd.py) —
-  artifacts committed under amd/
+  only. AMD compute demonstration (hackathon requirement): ROCm/PyTorch
+  stack brought up on an AMD Radeon gfx1100 (RDNA3) on the AMD Developer
+  Cloud pod with verified GPU compute; full-prompt run prepared in
+  amd/run_analysis_on_amd.py (gateway went down before it executed) —
+  evidence committed under amd/
 - No LangChain, no LangGraph, no ORMs other than SQLModel, no message queues
 
 ## Architecture in one paragraph
