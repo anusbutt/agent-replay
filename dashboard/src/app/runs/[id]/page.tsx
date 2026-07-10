@@ -1,11 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowLeft, GitFork, Timer } from "lucide-react";
 import { getRun, ApiRequestError } from "@/lib/api";
-import { StatusBadge, VerdictPassFailBadge } from "@/components/VerdictBadge";
+import { StatusBadge } from "@/components/VerdictBadge";
+import { Badge } from "@/components/ui/badge";
 import { TimelineStep } from "@/components/TimelineStep";
 import { RunActions } from "@/components/RunActions";
 import { ForkPanel } from "@/components/ForkPanel";
 import { CompareView } from "@/components/CompareView";
+import { CopyButton } from "@/components/CopyButton";
+import { AnalysisCard, DetectionCard } from "@/components/VerdictCards";
+import { formatDateTime, formatDuration, shortId } from "@/lib/format";
 
 export default async function RunDetailPage({
   params,
@@ -26,102 +31,86 @@ export default async function RunDetailPage({
   const { detection, analysis } = run.run_metadata;
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10">
+    <div className="mx-auto max-w-4xl px-6 py-8">
       <Link
         href="/"
-        className="text-xs font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-200"
       >
-        ← all runs
+        <ArrowLeft className="size-3.5" />
+        All runs
       </Link>
 
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-50">
-            {run.agent_id} — {run.session_id}
+      {/* Header */}
+      <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold tracking-tight text-zinc-50">
+            {run.agent_id}
+            <span className="mx-2 text-zinc-600">/</span>
+            <span className="font-medium text-zinc-400">{run.session_id}</span>
           </h1>
-          <p className="mt-1 font-mono text-xs text-zinc-400">{run.id}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500">
+            <span className="inline-flex items-center gap-1.5 font-mono">
+              {shortId(run.id)}
+              <CopyButton text={run.id} />
+            </span>
+            <span>{formatDateTime(run.started_at)}</span>
+            <span className="inline-flex items-center gap-1">
+              <Timer className="size-3" />
+              {formatDuration(run.started_at, run.ended_at)}
+            </span>
+          </div>
         </div>
         <StatusBadge status={run.status} />
       </div>
 
       {run.parent_run_id && (
-        <p className="mt-2 text-xs text-zinc-500">
-          🔀 forked from{" "}
-          <Link
-            href={`/runs/${run.parent_run_id}`}
-            className="text-violet-700 hover:underline dark:text-violet-400"
-          >
-            {run.parent_run_id.slice(0, 8)}…
-          </Link>{" "}
-          at step {run.fork_step}
-        </p>
+        <Link href={`/runs/${run.parent_run_id}`} className="mt-3 inline-block">
+          <Badge variant="violet" className="cursor-pointer py-1 hover:bg-violet-500/20">
+            <GitFork />
+            Forked from {shortId(run.parent_run_id)} at step {run.fork_step} —
+            view original
+          </Badge>
+        </Link>
       )}
 
       {!run.parent_run_id && (
-        <div className="mt-6">
+        <div className="mt-5">
           <RunActions runId={run.id} status={run.status} />
         </div>
       )}
 
+      {/* Verdicts */}
       {(detection || analysis) && (
-        <div className="mt-6 space-y-3">
-          {detection && (
-            <div className="rounded border border-zinc-200 p-4 dark:border-zinc-800">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                  Detection
-                </span>
-                <VerdictPassFailBadge verdict={detection.verdict} />
-              </div>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                {detection.reason}
-              </p>
-              {detection.contradiction && (
-                <p className="mt-1 text-xs text-zinc-500">
-                  user intent: <em>{detection.contradiction.user_intent}</em>{" "}
-                  — agent action:{" "}
-                  <em>{detection.contradiction.agent_action}</em>
-                </p>
-              )}
-            </div>
-          )}
-          {analysis && (
-            <div className="rounded border border-zinc-200 p-4 dark:border-zinc-800">
-              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Analysis — failing step {analysis.failing_step}
-              </span>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                {analysis.root_cause}
-              </p>
-              <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
-                Suggested fix: {analysis.suggested_fix}
-              </p>
-            </div>
-          )}
+        <div className="mt-5 space-y-3">
+          {detection && <DetectionCard detection={detection} />}
+          {analysis && <AnalysisCard analysis={analysis} />}
         </div>
       )}
 
+      {/* Fork comparison (forks only) */}
       {parent && (
-        <div className="mt-6">
+        <div className="mt-5">
           <CompareView parent={parent} fork={run} />
         </div>
       )}
 
+      {/* Fork form (original runs only) */}
       {!run.parent_run_id && (
-        <div className="mt-6">
+        <div className="mt-5">
           <ForkPanel run={run} />
         </div>
       )}
 
-      <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-zinc-500">
-        Timeline
+      {/* Timeline */}
+      <h2 className="mt-8 text-[11px] font-semibold uppercase tracking-widest text-zinc-500">
+        Timeline — {run.steps.length} step{run.steps.length === 1 ? "" : "s"}
       </h2>
       <div className="mt-3 space-y-2">
         {run.steps.map((step) => (
           <TimelineStep key={step.id} step={step} />
         ))}
         {run.steps.length === 0 && (
-          <p className="text-sm text-zinc-400">No steps recorded.</p>
+          <p className="text-sm text-zinc-500">No steps recorded.</p>
         )}
       </div>
     </div>

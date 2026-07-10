@@ -228,7 +228,8 @@ agent for home service businesses.
 - SDK: Python 3.11+, httpx (async, batched, fire-and-forget)
 - Backend: FastAPI + SQLModel, deployed on Railway
 - DB: NeonDB (Postgres). Fixed columns for structure, JSONB for payloads
-- Dashboard: Next.js + TypeScript on Vercel. No UI library beyond Tailwind
+- Dashboard: Next.js + TypeScript on Vercel. Tailwind + shadcn/ui (vendored
+  in components/ui) + framer-motion + lucide-react; nothing heavier
 - Analysis inference: Gemma 4 via OpenRouter, OpenAI-compatible endpoint.
   AMD-hardware-hosted inference via Fireworks AI is the intended production
   target once deployed there. Switch = ANALYSIS_BASE_URL env var only

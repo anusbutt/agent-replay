@@ -2,31 +2,32 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { analyzeRun, detectSweep, ApiRequestError, type RunStatus } from "@/lib/api";
+import { CircleAlert, Loader2, Microscope, Radar } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  analyzeRun,
+  detectSweep,
+  ApiRequestError,
+  type RunStatus,
+} from "@/lib/api";
 
-export function RunActions({ runId, status }: { runId: string; status: RunStatus }) {
+export function RunActions({
+  runId,
+  status,
+}: {
+  runId: string;
+  status: RunStatus;
+}) {
   const router = useRouter();
   const [busy, setBusy] = useState<"detect" | "analyze" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function runDetect() {
-    setBusy("detect");
+  async function run(kind: "detect" | "analyze") {
+    setBusy(kind);
     setError(null);
     try {
-      await detectSweep([runId]);
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof ApiRequestError ? err.detail : String(err));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function runAnalyze() {
-    setBusy("analyze");
-    setError(null);
-    try {
-      await analyzeRun(runId);
+      if (kind === "detect") await detectSweep([runId]);
+      else await analyzeRun(runId);
       router.refresh();
     } catch (err) {
       setError(err instanceof ApiRequestError ? err.detail : String(err));
@@ -37,27 +38,43 @@ export function RunActions({ runId, status }: { runId: string; status: RunStatus
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={runDetect}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="glass"
+          size="sm"
+          onClick={() => run("detect")}
           disabled={busy !== null}
-          className="rounded border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
         >
-          {busy === "detect" ? "Running sweep…" : "Run detection sweep"}
-        </button>
+          {busy === "detect" ? (
+            <Loader2 className="animate-spin" />
+          ) : (
+            <Radar />
+          )}
+          {busy === "detect" ? "Sweeping…" : "Run detection"}
+        </Button>
+
         {status === "flagged" && (
-          <button
-            type="button"
-            onClick={runAnalyze}
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={() => run("analyze")}
             disabled={busy !== null}
-            className="rounded border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
           >
-            {busy === "analyze" ? "Analyzing…" : "Analyze"}
-          </button>
+            {busy === "analyze" ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Microscope />
+            )}
+            {busy === "analyze" ? "Analyzing…" : "Analyze root cause"}
+          </Button>
         )}
       </div>
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {error && (
+        <p className="flex items-center gap-1.5 text-xs text-red-400">
+          <CircleAlert className="size-3.5 shrink-0" />
+          {error}
+        </p>
+      )}
     </div>
   );
 }

@@ -14,7 +14,8 @@ implementation-level unknowns the settled docs intentionally leave open.
 
 - **Decision**: SDK: Python 3.11+ + httpx. Backend: FastAPI + SQLModel.
   DB: NeonDB Postgres (fixed columns + JSONB payloads). Dashboard: Next.js +
-  TypeScript + Tailwind only. Analysis: Gemma 4 via OpenRouter,
+  TypeScript + Tailwind, shadcn/ui (vendored), framer-motion, lucide-react.
+  Analysis: Gemma 4 via OpenRouter,
   OpenAI-compatible (AMD-hardware-hosted inference via Fireworks AI is the
   intended production target once deployed); provider swap via
   `ANALYSIS_BASE_URL` only.

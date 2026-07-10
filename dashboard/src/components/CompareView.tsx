@@ -1,5 +1,9 @@
-import type { RunDetail, Step } from "@/lib/api";
+import { GitFork, ShieldCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TimelineStep } from "@/components/TimelineStep";
+import { shortId } from "@/lib/format";
+import type { RunDetail, Step } from "@/lib/api";
 
 function assistantText(step: Step | undefined): string {
   if (!step) return "(no reply recorded)";
@@ -25,59 +29,68 @@ export function CompareView({
   const forkStep = fork.steps.find((s) => s.seq === 1);
   const parentStepK = parent.steps.find((s) => s.seq === fork.fork_step);
   const parentSubsequentToolCalls = parent.steps.filter(
-    (s) => fork.fork_step != null && s.seq > fork.fork_step && s.type === "tool_call",
+    (s) =>
+      fork.fork_step != null &&
+      s.seq > fork.fork_step &&
+      s.type === "tool_call",
   );
 
   return (
-    <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-5 dark:border-violet-900 dark:bg-violet-950/20">
-      <h3 className="text-sm font-semibold text-violet-900 dark:text-violet-300">
-        Compare — original vs. fork (step {fork.fork_step})
-      </h3>
-      <p className="mt-1 text-xs text-violet-700 dark:text-violet-400">
-        The fork replays the exact recorded context at step {fork.fork_step}{" "}
-        with the fix applied, at temperature 0. No tool was invoked and no
-        real booking occurred.
-      </p>
-
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-              parent-origin
-            </span>
-            <span className="text-xs font-semibold text-zinc-500">
-              Original — step {fork.fork_step}
-            </span>
-          </div>
-          <div className="rounded border border-zinc-200 bg-white p-3 text-sm text-zinc-800 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200">
-            {assistantText(parentStepK)}
-          </div>
-          {parentSubsequentToolCalls.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {parentSubsequentToolCalls.map((s) => (
-                <TimelineStep key={s.id} step={s} parentOrigin />
-              ))}
+    <Card className="border-violet-400/20 bg-violet-500/[0.04]">
+      <CardHeader>
+        <CardTitle>
+          <GitFork className="size-4 text-violet-300" />
+          Original vs. fork — step {fork.fork_step}
+        </CardTitle>
+        <CardDescription>
+          Same recorded context, fix applied, temperature 0. The only variable
+          is your modification.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <Badge variant="outline">parent-origin</Badge>
+              <span className="text-xs font-medium text-zinc-500">
+                Original · step {fork.fork_step}
+              </span>
             </div>
-          )}
-        </div>
+            <div className="rounded-xl border border-white/[0.08] bg-black/30 p-4 text-sm leading-relaxed text-zinc-300">
+              {assistantText(parentStepK)}
+            </div>
+            {parentSubsequentToolCalls.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-[11px] font-medium uppercase tracking-widest text-zinc-600">
+                  What originally happened next
+                </p>
+                {parentSubsequentToolCalls.map((s) => (
+                  <TimelineStep key={s.id} step={s} parentOrigin />
+                ))}
+              </div>
+            )}
+          </div>
 
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="rounded bg-emerald-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300">
-              fork
-            </span>
-            <span className="text-xs font-semibold text-zinc-500">
-              Fork {fork.id.slice(0, 8)}… — step 1
-            </span>
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <Badge variant="emerald">
+                <GitFork />
+                fork
+              </Badge>
+              <span className="text-xs font-medium text-zinc-500">
+                {shortId(fork.id)} · step 1
+              </span>
+            </div>
+            <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/[0.07] p-4 text-sm leading-relaxed text-emerald-100 shadow-[0_0_32px_-12px_rgba(52,211,153,0.25)]">
+              {assistantText(forkStep)}
+            </div>
+            <p className="mt-3 flex items-center gap-1.5 text-xs text-zinc-500">
+              <ShieldCheck className="size-3.5 text-emerald-400/70" />
+              No tool call issued — the fork never re-books anything.
+            </p>
           </div>
-          <div className="rounded border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">
-            {assistantText(forkStep)}
-          </div>
-          <p className="mt-3 text-xs text-zinc-500">
-            No tool call — the fork never re-books anything.
-          </p>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
