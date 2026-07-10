@@ -1,6 +1,7 @@
-# AgentReplay backend image (compose service: backend; Railway deploy artifact).
-# Includes dev deps (pytest/respx) and tests/ so `docker compose exec backend pytest`
-# works per quickstart.md. Config via environment variables only — no secrets baked in.
+# AgentReplay backend image (compose service: backend; also deployed to
+# Render's free tier). Includes dev deps (pytest/respx) and tests/ so
+# `docker compose exec backend pytest` works per quickstart.md. Config via
+# environment variables only — no secrets baked in.
 FROM python:3.11-slim
 
 WORKDIR /srv/agentreplay
@@ -15,4 +16,7 @@ RUN pip install --no-cache-dir -e ".[dev]"
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Render assigns the listen port via $PORT; local compose leaves it unset so
+# this falls back to 8000. Shell form is required for the ${PORT:-8000}
+# expansion — exec form (CMD [...]) would pass it through literally.
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}

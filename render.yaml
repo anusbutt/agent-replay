@@ -1,0 +1,25 @@
+# Render blueprint for the AgentReplay backend (free tier). Deploy: Render
+# dashboard -> New -> Blueprint -> select this repo. Secrets below are left
+# blank (sync: false) — fill them in from the Render dashboard after the
+# first deploy, never commit real values here.
+services:
+  - type: web
+    name: agentreplay-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: AGENTREPLAY_API_KEY
+        sync: false
+      - key: ANALYSIS_BASE_URL
+        sync: false
+      - key: ANALYSIS_API_KEY
+        sync: false
+      - key: REPLAY_BASE_URL
+        sync: false
+      - key: REPLAY_API_KEY
+        sync: false
