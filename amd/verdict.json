@@ -1,0 +1,12 @@
+{
+  "_placeholder": "to be replaced by the output of `python amd/run_analysis_on_amd.py` executed on the AMD pod",
+  "_expected_shape": {
+    "model_id": "str — MODEL_ID from run_analysis_on_amd.py",
+    "hardware": "str — device name, gcnArchName, VRAM",
+    "rocm_version": "str — torch.version.hip",
+    "fixture": "str — fixture provenance",
+    "timestamp_utc": "str — ISO 8601",
+    "raw_output": "str — verbatim model output",
+    "parsed": "{failing_step: int, root_cause: str, suggested_fix: str} or null"
+  }
+}

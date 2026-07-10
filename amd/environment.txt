@@ -1,0 +1,4 @@
+PLACEHOLDER — to be replaced by the environment fingerprint written by
+`python amd/run_analysis_on_amd.py` on the AMD pod: torch.__version__,
+torch.version.hip, torch.version.cuda (must be None), gcnArchName, total
+VRAM, and MODEL_ID.

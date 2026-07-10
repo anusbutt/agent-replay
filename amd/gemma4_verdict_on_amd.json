@@ -1,8 +1,0 @@
-{
-  "_placeholder": "to be replaced by the verdict Gemma 4 26B produced on the AMD Radeon (gfx1100) GPU via ROCm",
-  "_expected_schema": {
-    "failing_step": "int",
-    "root_cause": "str",
-    "suggested_fix": "str"
-  }
-}
