@@ -44,8 +44,10 @@ def query_judge(messages: list[dict], verdict_cls: type[T], *, max_attempts: int
 
 def chat_completion(messages: list[dict], *, model: str = "google/gemma-4-31b-it") -> str:
     """POST /chat/completions to ANALYSIS_BASE_URL; returns the assistant content string."""
-    base_url = os.environ["ANALYSIS_BASE_URL"]
-    api_key = os.environ.get("ANALYSIS_API_KEY", "")
+    # .strip() guards against trailing newlines pasted into hosted env-var
+    # editors — a stray \n makes the Authorization header illegal.
+    base_url = os.environ["ANALYSIS_BASE_URL"].strip().rstrip("/")
+    api_key = os.environ.get("ANALYSIS_API_KEY", "").strip()
 
     headers = {"Content-Type": "application/json"}
     if api_key:

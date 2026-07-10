@@ -23,7 +23,7 @@ def require_api_key(authorization: str | None = Header(default=None)) -> None:
 
     Nothing beyond one static key (scope guard, FR-009).
     """
-    expected = os.environ.get("AGENTREPLAY_API_KEY", "")
+    expected = os.environ.get("AGENTREPLAY_API_KEY", "").strip()
     supplied = ""
     if authorization and authorization.startswith("Bearer "):
         supplied = authorization.removeprefix("Bearer ").strip()

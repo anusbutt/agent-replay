@@ -65,8 +65,14 @@ def _apply_modification(llm_input: dict, modification: dict) -> dict:
 
 def _call_replay_model(llm_input: dict) -> dict:
     """Execute exactly one live model call via REPLAY_BASE_URL (research R6)."""
-    base_url = os.environ.get("REPLAY_BASE_URL", "https://openrouter.ai/api/v1")
-    api_key = os.environ.get("REPLAY_API_KEY", "")
+    # .strip() guards against trailing newlines pasted into hosted env-var
+    # editors — a stray \n makes the Authorization header illegal.
+    base_url = (
+        os.environ.get("REPLAY_BASE_URL", "https://openrouter.ai/api/v1")
+        .strip()
+        .rstrip("/")
+    )
+    api_key = os.environ.get("REPLAY_API_KEY", "").strip()
 
     headers = {"Content-Type": "application/json"}
     if api_key:
