@@ -1,6 +1,8 @@
 """Run AgentReplay's real root-cause analysis prompt on AMD hardware via ROCm.
 
-Executed on the hackathon's AMD compute pod (Radeon gfx1100 / RDNA3, ROCm).
+Prepared for the hackathon's AMD compute pod (Radeon gfx1100 / RDNA3, ROCm);
+the pod's gateway became unavailable before this executed there — it is
+committed for auditability and runs on any ROCm machine.
 Loads MODEL_ID onto the AMD GPU through PyTorch-for-ROCm, feeds it the exact
 analysis prompt AgentReplay uses in production (imported unmodified from
 app/analysis/prompts.py) over the real Friday/Saturday misbooking fixture,
@@ -48,7 +50,7 @@ if not torch.cuda.is_available():
     raise SystemExit("FATAL: no ROCm device visible to torch (torch.cuda.is_available() is False).")
 
 # The production prompt builder + JSON extractor, imported UNMODIFIED — the
-# evidence is that the SAME prompt AgentReplay serves in production ran on AMD.
+# point is that the SAME prompt AgentReplay serves in production runs on AMD.
 from app.analysis.prompts import build_analysis_messages, extract_json_object
 
 # The Friday/Saturday misbooking fixture lives in scripts/seed_demo_run.py as

@@ -1,5 +1,0 @@
-PLACEHOLDER — to be replaced by the exact prompt string sent to the model on
-the AMD pod, written by `python amd/run_analysis_on_amd.py`: the analysis
-system prompt from app/analysis/prompts.py plus the serialized
-Friday/Saturday fixture transcript, rendered through the model's chat
-template.
