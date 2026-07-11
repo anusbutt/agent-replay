@@ -26,7 +26,7 @@ resolves it, without ever touching the real booking system.
 and verified** on the AMD device (4096x4096 matmul; captured output,
 environment fingerprint, and `rocm-smi` in [`amd/`](amd/)).
 
-An on-pod run of the full analysis prompt executed successfully on Jul 11, 2026 (amd/run_analysis_on_amd_standalone.py — a self-contained script embedding AgentReplay's real root-cause prompt, byte-identical to app/analysis/prompts.py, and the exact Friday/Saturday misbooking fixture from scripts/seed_demo_run.py). Inference ran on google/gemma-3-4b-it in float16 on the pod's gfx1100 GPU; rocm-smi — captured while the model was still resident in VRAM — the environment fingerprint, the exact prompt sent, and the parsed verdict are all committed in amd/ (environment.txt, prompt.txt, rocm_smi_during_inference.txt, verdict.json, verdict.md).
+An on-pod run of the full analysis prompt executed on Jul 11, 2026 (amd/run_analysis_on_amd_standalone.py — a self-contained script embedding AgentReplay's real root-cause prompt, byte-identical to app/analysis/prompts.py, and the exact Friday/Saturday misbooking fixture from scripts/seed_demo_run.py). Inference ran on google/gemma-3-4b-it in float16 on the pod's gfx1100 GPU; rocm-smi — captured while the model was still resident in VRAM — the environment fingerprint, the exact prompt sent, and the model's raw output (which was not valid verdict JSON — see amd/verdict.md) are all committed in amd/ (environment.txt, prompt.txt, rocm_smi_during_inference.txt, verdict.json, verdict.md).
 
 Analysis inference for the public hosted demo runs Gemma 4 via OpenRouter,
 provider-swappable through `ANALYSIS_BASE_URL` / `ANALYSIS_API_KEY` /
