@@ -10,6 +10,7 @@ COPY app ./app
 COPY tests ./tests
 COPY scripts ./scripts
 COPY sdk ./sdk
+COPY amd ./amd
 
 RUN pip install --no-cache-dir -e ".[dev]"
 
