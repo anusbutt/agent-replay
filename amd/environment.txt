@@ -1,10 +1,7 @@
-AMD Compute Environment — AgentReplay
-Captured: 2026-07-10, AMD Developer Cloud hackathon pod (notebooks.amd.com)
-Image: ROCm 7.2 + vLLM 0.16.0 + PyTorch 2.9
-
-torch.__version__        : 2.9.1+gitff65f5b
-torch.version.hip        : 7.2.53211-e1a6bc5663
-torch.version.cuda       : None
-torch.cuda.is_available(): True
-gcnArchName              : gfx1100
-total VRAM               : 51.5 GB
+torch.__version__            = 2.9.1+gitff65f5b
+torch.version.hip            = 7.2.53211-e1a6bc5663
+torch.version.cuda           = None
+device gcnArchName           = gfx1100
+device name                  = 
+total VRAM                   = 48.0 GB
+MODEL_ID                     = google/gemma-3-4b-it
